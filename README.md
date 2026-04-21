@@ -9,7 +9,7 @@ planned → captured → complete, and log details of every session you shoot. T
 Runs locally in your browser via any PHP-capable web server. **No accounts, no
 cloud, no internet required** after installation (except for the optional
 weather widget). Your data stays on your machine.
-
+<img src="./images/TonightsSkyView.png" style="display: block; margin: auto;" />
 ---
 
 ## Quick Start — XAMPP (Windows / Mac / Linux)
