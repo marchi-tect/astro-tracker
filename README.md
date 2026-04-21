@@ -1,5 +1,7 @@
 # AstroTracker
 
+🔭 [**Interface/Demo**](https://marchi-tect.github.io/astro-tracker/) · Catalog of objects not visible in demo only due to GitHub file permissions, nor is addition/modification of location.
+
 A self-hosted astrophotography planning tool. See what's visible tonight from
 your location, plan imaging sessions, track your progress through wishlist →
 planned → captured → complete, and log details of every session you shoot. The information is at your fingertips.
