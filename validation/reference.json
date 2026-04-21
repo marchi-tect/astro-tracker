@@ -1,0 +1,650 @@
+{
+  "tests": [
+    {
+      "name": "sunPosition(2026-01-01T12:00:00Z)",
+      "fn": "sunPosition",
+      "args": [
+        "2026-01-01T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 18.803027529356214,
+        "dec": -22.97327173880151
+      }
+    },
+    {
+      "name": "sunPosition(2026-04-12T12:00:00Z)",
+      "fn": "sunPosition",
+      "args": [
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 1.3934133549352197,
+        "dec": 8.790745207551048
+      }
+    },
+    {
+      "name": "sunPosition(2026-06-21T12:00:00Z)",
+      "fn": "sunPosition",
+      "args": [
+        "2026-06-21T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 6.010392719406148,
+        "dec": 23.435055413241297
+      }
+    },
+    {
+      "name": "sunPosition(2026-07-10T12:00:00Z)",
+      "fn": "sunPosition",
+      "args": [
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 7.318719215278868,
+        "dec": 22.19004054351911
+      }
+    },
+    {
+      "name": "sunPosition(2026-09-23T12:00:00Z)",
+      "fn": "sunPosition",
+      "args": [
+        "2026-09-23T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 12.02923137172336,
+        "dec": -0.19005956303699764
+      }
+    },
+    {
+      "name": "sunPosition(2026-12-21T12:00:00Z)",
+      "fn": "sunPosition",
+      "args": [
+        "2026-12-21T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 17.972553354157935,
+        "dec": -23.434519858652653
+      }
+    },
+    {
+      "name": "moonPosition(2026-04-12T00:00:00Z)",
+      "fn": "moonPosition",
+      "args": [
+        "2026-04-12T00:00:00Z"
+      ],
+      "expect": {
+        "ra": 21.064085514790825,
+        "dec": -18.42901959401902
+      }
+    },
+    {
+      "name": "moonInfo(2026-04-12T00:00:00Z)",
+      "fn": "moonInfo",
+      "args": [
+        "2026-04-12T00:00:00Z"
+      ],
+      "expect": {
+        "phase": 0.8496028033971438,
+        "illumination": 0.2071178036528512,
+        "name": "Waning Crescent"
+      }
+    },
+    {
+      "name": "moonPosition(2026-04-19T00:00:00Z)",
+      "fn": "moonPosition",
+      "args": [
+        "2026-04-19T00:00:00Z"
+      ],
+      "expect": {
+        "ra": 2.9798552895534947,
+        "dec": 22.11258530324428
+      }
+    },
+    {
+      "name": "moonInfo(2026-04-19T00:00:00Z)",
+      "fn": "moonInfo",
+      "args": [
+        "2026-04-19T00:00:00Z"
+      ],
+      "expect": {
+        "phase": 0.08664514881815706,
+        "illumination": 0.0722828550397912,
+        "name": "Waxing Crescent"
+      }
+    },
+    {
+      "name": "moonPosition(2026-04-26T00:00:00Z)",
+      "fn": "moonPosition",
+      "args": [
+        "2026-04-26T00:00:00Z"
+      ],
+      "expect": {
+        "ra": 10.110537430249408,
+        "dec": 12.845851745463014
+      }
+    },
+    {
+      "name": "moonInfo(2026-04-26T00:00:00Z)",
+      "fn": "moonInfo",
+      "args": [
+        "2026-04-26T00:00:00Z"
+      ],
+      "expect": {
+        "phase": 0.3236874942391703,
+        "illumination": 0.7233136334855377,
+        "name": "Waxing Gibbous"
+      }
+    },
+    {
+      "name": "moonPosition(2026-05-03T00:00:00Z)",
+      "fn": "moonPosition",
+      "args": [
+        "2026-05-03T00:00:00Z"
+      ],
+      "expect": {
+        "ra": 15.602864268242763,
+        "dec": -24.528402262577057
+      }
+    },
+    {
+      "name": "moonInfo(2026-05-03T00:00:00Z)",
+      "fn": "moonInfo",
+      "args": [
+        "2026-05-03T00:00:00Z"
+      ],
+      "expect": {
+        "phase": 0.5607298396601835,
+        "illumination": 0.9640393002257845,
+        "name": "Waning Gibbous"
+      }
+    },
+    {
+      "name": "moonPosition(2026-07-10T00:00:00Z)",
+      "fn": "moonPosition",
+      "args": [
+        "2026-07-10T00:00:00Z"
+      ],
+      "expect": {
+        "ra": 2.9513892156048875,
+        "dec": 22.09619486746438
+      }
+    },
+    {
+      "name": "moonInfo(2026-07-10T00:00:00Z)",
+      "fn": "moonInfo",
+      "args": [
+        "2026-07-10T00:00:00Z"
+      ],
+      "expect": {
+        "phase": 0.8634269094643121,
+        "illumination": 0.17306721453111612,
+        "name": "Waning Crescent"
+      }
+    },
+    {
+      "name": "planetPosition(Mercury, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Mercury",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 23.84529417382903,
+        "dec": -3.7255432607776413
+      }
+    },
+    {
+      "name": "planetPosition(Mercury, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Mercury",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 7.568673722528153,
+        "dec": 17.046194685673186
+      }
+    },
+    {
+      "name": "planetPosition(Mercury, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Mercury",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 16.83685890577094,
+        "dec": -22.648489974930815
+      }
+    },
+    {
+      "name": "planetPosition(Venus, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Venus",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 2.887677565690126,
+        "dec": 16.63000485747766
+      }
+    },
+    {
+      "name": "planetPosition(Venus, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Venus",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 10.228874541919083,
+        "dec": 12.47269335334061
+      }
+    },
+    {
+      "name": "planetPosition(Venus, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Venus",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 14.454396899120695,
+        "dec": -11.539507651756933
+      }
+    },
+    {
+      "name": "planetPosition(Mars, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Mars",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.1361998076362667,
+        "dec": -0.20441986632468043
+      }
+    },
+    {
+      "name": "planetPosition(Mars, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Mars",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 4.413885946193339,
+        "dec": 21.439770841172987
+      }
+    },
+    {
+      "name": "planetPosition(Mars, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Mars",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 10.585491371757833,
+        "dec": 11.877087936975125
+      }
+    },
+    {
+      "name": "planetPosition(Jupiter, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Jupiter",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 7.187736828771634,
+        "dec": 22.80504976494588
+      }
+    },
+    {
+      "name": "planetPosition(Jupiter, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Jupiter",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 8.286898745365349,
+        "dec": 20.16116641460396
+      }
+    },
+    {
+      "name": "planetPosition(Jupiter, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Jupiter",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 9.945528105451743,
+        "dec": 13.438150333621605
+      }
+    },
+    {
+      "name": "planetPosition(Saturn, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Saturn",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.4481163331822806,
+        "dec": 0.57692289371233
+      }
+    },
+    {
+      "name": "planetPosition(Saturn, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Saturn",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.9140066185227127,
+        "dec": 3.234422507948144
+      }
+    },
+    {
+      "name": "planetPosition(Saturn, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Saturn",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.5131872313735109,
+        "dec": 0.5783965626860823
+      }
+    },
+    {
+      "name": "planetPosition(Uranus, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Uranus",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 3.841286965520254,
+        "dec": 19.942387877295392
+      }
+    },
+    {
+      "name": "planetPosition(Uranus, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Uranus",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 4.1802630558061615,
+        "dec": 20.916705189228885
+      }
+    },
+    {
+      "name": "planetPosition(Uranus, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Uranus",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 4.091999256941914,
+        "dec": 20.694027847788735
+      }
+    },
+    {
+      "name": "planetPosition(Neptune, 2026-04-12T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Neptune",
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.13713107493251186,
+        "dec": -0.5247770438605465
+      }
+    },
+    {
+      "name": "planetPosition(Neptune, 2026-07-10T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Neptune",
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.24510171011585768,
+        "dec": 0.1066164105362259
+      }
+    },
+    {
+      "name": "planetPosition(Neptune, 2026-12-15T12:00:00Z)",
+      "fn": "planetPosition",
+      "args": [
+        "Neptune",
+        "2026-12-15T12:00:00Z"
+      ],
+      "expect": {
+        "ra": 0.07430507691582378,
+        "dec": -1.0167567121451095
+      }
+    },
+    {
+      "name": "getAltAz(Orion from Columbus)",
+      "fn": "getAltAz",
+      "args": [
+        5.5878,
+        -5.39,
+        39.96,
+        -82.99,
+        "2026-04-12T04:00:00Z"
+      ],
+      "expect": {
+        "altitude": -6.190062179113954,
+        "azimuth": 268.1438299505901
+      }
+    },
+    {
+      "name": "getAltAz(M31 from Columbus)",
+      "fn": "getAltAz",
+      "args": [
+        10.6847,
+        41.269,
+        39.96,
+        -82.99,
+        "2026-10-01T03:00:00Z"
+      ],
+      "expect": {
+        "altitude": -8.413323347419704,
+        "azimuth": 353.6314128706634
+      }
+    },
+    {
+      "name": "getAltAz(Sgr from Sydney)",
+      "fn": "getAltAz",
+      "args": [
+        18.6161,
+        -23.89,
+        -33.86,
+        151.21,
+        "2026-07-10T10:00:00Z"
+      ],
+      "expect": {
+        "altitude": 45.795282781378674,
+        "azimuth": 90.55182513508046
+      }
+    },
+    {
+      "name": "lst(-82.99, 2026-04-12T04:00:00Z)",
+      "fn": "localSiderealTime",
+      "args": [
+        -82.99,
+        "2026-04-12T04:00:00Z"
+      ],
+      "expect": 11.82570117524142
+    },
+    {
+      "name": "lst(0, 2026-01-01T00:00:00Z)",
+      "fn": "localSiderealTime",
+      "args": [
+        0,
+        "2026-01-01T00:00:00Z"
+      ],
+      "expect": 6.7107239044581855
+    },
+    {
+      "name": "lst(151.21, 2026-07-10T10:00:00Z)",
+      "fn": "localSiderealTime",
+      "args": [
+        151.21,
+        "2026-07-10T10:00:00Z"
+      ],
+      "expect": 15.303636371377856
+    },
+    {
+      "name": "julianDate(2000-01-01T12:00:00Z)",
+      "fn": "julianDate",
+      "args": [
+        "2000-01-01T12:00:00Z"
+      ],
+      "expect": 2451545
+    },
+    {
+      "name": "julianDate(2026-04-12T12:00:00Z)",
+      "fn": "julianDate",
+      "args": [
+        "2026-04-12T12:00:00Z"
+      ],
+      "expect": 2461143
+    },
+    {
+      "name": "julianDate(2026-07-10T12:00:00Z)",
+      "fn": "julianDate",
+      "args": [
+        "2026-07-10T12:00:00Z"
+      ],
+      "expect": 2461232
+    },
+    {
+      "name": "angSep(M42-M31)",
+      "fn": "angularSeparation",
+      "args": [
+        5.5878,
+        -5.39,
+        10.6847,
+        41.269
+      ],
+      "expect": 83.4933616208966
+    },
+    {
+      "name": "angSep(Polaris-Equator)",
+      "fn": "angularSeparation",
+      "args": [
+        2.5301,
+        89.264,
+        0,
+        0
+      ],
+      "expect": 89.41964676514998
+    },
+    {
+      "name": "getNightSolarTimes(Columbus Spring)",
+      "fn": "getNightSolarTimes",
+      "args": [
+        39.96,
+        -82.99,
+        "2026-04-12"
+      ],
+      "expect": {
+        "sunset": "2026-04-13T00:07:28.979Z",
+        "civilDusk": "2026-04-13T00:35:23.482Z",
+        "nauticalDusk": "2026-04-13T01:08:43.303Z",
+        "astroDusk": "2026-04-13T01:43:34.631Z",
+        "astroDawn": "2026-04-13T09:21:02.549Z",
+        "nauticalDawn": "2026-04-13T09:55:52.598Z",
+        "civilDawn": "2026-04-13T10:29:11.120Z",
+        "sunrise": "2026-04-13T10:57:04.280Z"
+      }
+    },
+    {
+      "name": "getNightSolarTimes(Columbus Summer (bug regression))",
+      "fn": "getNightSolarTimes",
+      "args": [
+        39.96,
+        -82.99,
+        "2026-07-10"
+      ],
+      "expect": {
+        "sunset": "2026-07-11T01:02:06.591Z",
+        "civilDusk": "2026-07-11T01:34:13.238Z",
+        "nauticalDusk": "2026-07-11T02:14:37.120Z",
+        "astroDusk": "2026-07-11T03:00:52.896Z",
+        "astroDawn": "2026-07-11T08:14:16.995Z",
+        "nauticalDawn": "2026-07-11T09:00:32.751Z",
+        "civilDawn": "2026-07-11T09:40:56.740Z",
+        "sunrise": "2026-07-11T10:13:03.458Z"
+      }
+    },
+    {
+      "name": "getNightSolarTimes(Columbus Solstice)",
+      "fn": "getNightSolarTimes",
+      "args": [
+        39.96,
+        -82.99,
+        "2026-06-21"
+      ],
+      "expect": {
+        "sunset": "2026-06-22T01:04:11.742Z",
+        "civilDusk": "2026-06-22T01:37:02.924Z",
+        "nauticalDusk": "2026-06-22T02:18:45.245Z",
+        "astroDusk": "2026-06-22T03:07:25.935Z",
+        "astroDawn": "2026-06-22T08:00:28.231Z",
+        "nauticalDawn": "2026-06-22T08:49:08.713Z",
+        "civilDawn": "2026-06-22T09:30:51.093Z",
+        "sunrise": "2026-06-22T10:03:42.290Z"
+      }
+    },
+    {
+      "name": "getNightSolarTimes(Columbus Winter Solstice)",
+      "fn": "getNightSolarTimes",
+      "args": [
+        39.96,
+        -82.99,
+        "2026-12-21"
+      ],
+      "expect": {
+        "sunset": "2026-12-21T22:10:06.337Z",
+        "civilDusk": "2026-12-21T22:40:40.790Z",
+        "nauticalDusk": "2026-12-21T23:14:45.435Z",
+        "astroDusk": "2026-12-21T23:47:44.767Z",
+        "astroDawn": "2026-12-22T11:13:01.129Z",
+        "nauticalDawn": "2026-12-22T11:46:00.425Z",
+        "civilDawn": "2026-12-22T12:20:04.960Z",
+        "sunrise": "2026-12-22T12:50:39.300Z"
+      }
+    },
+    {
+      "name": "getNightSolarTimes(Helsinki White Night)",
+      "fn": "getNightSolarTimes",
+      "args": [
+        60.17,
+        24.94,
+        "2026-06-21"
+      ],
+      "expect": {
+        "sunset": "2026-06-20T19:49:50.304Z",
+        "civilDusk": "2026-06-20T21:42:08.734Z",
+        "nauticalDusk": null,
+        "astroDusk": null,
+        "astroDawn": null,
+        "nauticalDawn": null,
+        "civilDawn": "2026-06-21T23:01:57.995Z",
+        "sunrise": "2026-06-22T00:54:16.616Z"
+      }
+    }
+  ]
+}

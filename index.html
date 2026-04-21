@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AstroTracker</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23111320'/><text y='48' x='32' text-anchor='middle' font-size='42'>🔭</text></svg>">
+<script src="themes.js"></script>
+<style>
+:root {
+  --bg:#0a0c14; --bg2:#111320; --bg3:#181b2e; --bg4:#1e2235;
+  --border:#2a2f4a; --border2:#343a5c;
+  --text:#d4d8f0; --text2:#8890b0; --text3:#5c6080;
+  --accent:#5e7bf8; --accent2:#4a66e0;
+  --green:#3dd68c; --red:#f25c5c; --amber:#f5a623; --teal:#39d98a; --gold:#ffd700;
+  --c-galaxy:#9b6dff; --c-emission:#f25c5c; --c-reflection:#4f8ef7;
+  --c-dark:#8892b0; --c-planetary:#39d98a; --c-snr:#f5a623;
+  --c-globular:#ffd700; --c-open:#ff9f43;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+#app{display:flex;height:100vh}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────── */
+#sidebar{width:200px;min-width:200px;background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:16px 0;transition:transform .2s}
+#sidebar .logo a{display:block;padding:0 16px 20px;font-size:16px;font-weight:700;color:var(--accent);
+  letter-spacing:.5px;text-decoration:none}
+#sidebar .logo a span{color:var(--text2);font-weight:400}
+.nav-item{padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text2);
+  border-left:3px solid transparent;transition:all .15s;display:flex;align-items:center;gap:8px}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg3);color:var(--accent);border-left-color:var(--accent)}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+
+/* ── MOBILE ──────────────────────────────────────────────────────── */
+#menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:200;
+  background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:6px 10px;font-size:18px;cursor:pointer;line-height:1}
+#menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150}
+@media(max-width:650px){
+  #menu-btn{display:block}
+  #sidebar{position:fixed;top:0;left:0;height:100%;z-index:160;transform:translateX(-210px)}
+  #sidebar.open{transform:translateX(0)}
+  #menu-overlay.open{display:block}
+  #main{width:100%}
+  /* Keep the page title clear of the menu button */
+  .page-header{padding:10px 12px 10px 52px;gap:6px;min-height:48px}
+  .page-body{padding:12px}
+  /* Smaller modals on mobile — don't fill the screen, so the close button is reachable */
+  .modal-overlay{padding:20px 12px;align-items:flex-start}
+  .modal{max-width:100%!important;max-height:calc(100vh - 40px)!important;margin-top:8px}
+  /* Hide filter controls behind a toggle on mobile */
+  .filter-row{display:none!important}
+  .filter-row.open{display:flex!important}
+  .filter-toggle{display:inline-block!important}
+}
+
+/* Filter rows — visible desktop, toggleable on mobile */
+.filter-toggle{display:none;background:var(--bg4);border:1px solid var(--border2);
+  color:var(--text2);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+.filter-toggle:hover{color:var(--text);border-color:var(--border)}
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ── MAIN ────────────────────────────────────────────────────────── */
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.page{display:none;flex:1;overflow:hidden;flex-direction:column}
+.page.active{display:flex}
+.page-header{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:54px}
+.page-title{font-size:16px;font-weight:600;white-space:nowrap}
+.page-body{flex:1;overflow-y:auto;padding:18px 20px}
+
+/* ── FORM CONTROLS ───────────────────────────────────────────────── */
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:6px 9px;font-size:13px;font-family:inherit;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input[type="date"]{color-scheme:dark}
+textarea{resize:vertical}
+select option{background:var(--bg3)}
+.btn{padding:6px 13px;border-radius:6px;border:none;font-size:13px;cursor:pointer;
+  font-family:inherit;transition:all .15s;font-weight:500;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--bg4);color:var(--text);border:1px solid var(--border2)}
+.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:rgba(242,92,92,.15);color:var(--red);border:1px solid rgba(242,92,92,.3)}
+.btn-danger:hover{background:rgba(242,92,92,.3)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{padding:4px 7px;background:none;border:1px solid var(--border);color:var(--text2);
+  border-radius:4px;cursor:pointer;font-size:12px}
+.btn-icon:hover{border-color:var(--border2);color:var(--text);background:var(--bg4)}
+.btn-track{padding:3px 8px;font-size:11px;border-radius:4px;border:1px solid var(--border2);
+  background:transparent;color:var(--accent);cursor:pointer;white-space:nowrap}
+.btn-track:hover{background:rgba(94,123,248,.15)}
+
+/* ── SEARCH & CHIPS ─────────────────────────────────────────────── */
+.search-bar{position:relative}
+.search-bar input{padding-left:28px;padding-right:26px;width:180px}
+.search-bar::before{content:'⌕';position:absolute;left:7px;top:50%;transform:translateY(-50%);
+  color:var(--text3);font-size:15px;pointer-events:none}
+.search-clear{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;
+  padding:2px 6px;line-height:1;border-radius:3px;display:none}
+.search-clear:hover{color:var(--text);background:var(--bg4)}
+.search-bar.has-text .search-clear{display:block}
+.filter-chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{padding:3px 9px;border-radius:20px;font-size:12px;cursor:pointer;
+  border:1px solid var(--border2);color:var(--text2);transition:all .15s;
+  background:transparent;display:flex;align-items:center;gap:5px}
+.chip:hover{border-color:var(--border);color:var(--text)}
+.chip.active{color:#fff;border-color:transparent}
+.chip-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+/* ── TYPE DOTS ──────────────────────────────────────────────────── */
+.type-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.td-Galaxy{background:var(--c-galaxy)}.td-Emission{background:var(--c-emission)}
+.td-Reflection{background:var(--c-reflection)}.td-Dark{background:var(--c-dark)}
+.td-Planetary{background:var(--c-planetary)}.td-Supernova{background:var(--c-snr)}
+.td-Globular{background:var(--c-globular)}.td-Open{background:var(--c-open)}
+
+/* ── TABLES ──────────────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 9px;color:var(--text3);font-weight:500;font-size:11px;
+  text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);
+  white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text2)}
+th.sorted .sort-arrow{color:var(--accent)}
+td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--bg3)}
+tr:last-child td{border-bottom:none}
+.td-name{font-weight:500}
+.td-id{color:var(--text3);font-size:11px;font-family:monospace}
+.td-type{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.td-filters{display:flex;gap:3px;flex-wrap:wrap}
+.filter-tag{font-size:10px;padding:1px 5px;border-radius:3px;
+  background:rgba(94,123,248,.15);color:var(--accent);border:1px solid rgba(94,123,248,.3);white-space:nowrap}
+.filter-tag.ha{background:rgba(242,92,92,.15);color:#f77;border-color:rgba(242,92,92,.3)}
+.filter-tag.oiii{background:rgba(61,217,138,.15);color:var(--teal);border-color:rgba(61,217,138,.3)}
+.filter-tag.sii{background:rgba(255,215,0,.12);color:#ffd700;border-color:rgba(255,215,0,.3)}
+.filter-tag.lrgb,.filter-tag.rgb{background:rgba(79,142,247,.15);color:#7ab4ff;border-color:rgba(79,142,247,.3)}
+
+/* ── STARS & BADGES ─────────────────────────────────────────────── */
+.stars{color:var(--gold);font-size:12px;white-space:nowrap}
+.stars span{opacity:.2}.stars span.lit{opacity:1}
+.badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.badge-wishlist{background:rgba(88,92,130,.3);color:#8890b0}
+.badge-planned{background:rgba(94,123,248,.2);color:#8faaff}
+.badge-captured{background:rgba(245,166,35,.2);color:var(--amber)}
+.badge-processing{background:rgba(61,217,138,.2);color:var(--teal)}
+.badge-complete{background:rgba(61,217,138,.3);color:#2ecc71}
+.planet-badge{font-size:10px;padding:1px 7px;border-radius:10px;
+  background:rgba(255,215,0,.15);color:var(--gold);border:1px solid rgba(255,215,0,.25)}
+.col-picker-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:6px;cursor:grab}
+.col-picker-row.dragging{opacity:.4}
+.col-picker-row.drag-over{border-color:var(--accent);background:var(--bg4)}
+.col-picker-handle{color:var(--text3);font-size:16px;cursor:grab;user-select:none}
+.col-picker-label{flex:1;font-size:13px}
+.user-added-badge{font-size:10px;padding:1px 7px;border-radius:10px;
+  background:rgba(61,217,138,.18);color:var(--teal);border:1px solid rgba(61,217,138,.3)}
+
+/* ── CARDS & STATS ──────────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat-value{font-size:26px;font-weight:700;color:var(--accent);line-height:1}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.weather-widget{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.weather-widget.loading-state{display:flex;align-items:center;gap:10px}
+.weather-strip{display:flex;gap:2px;height:40px;align-items:stretch}
+.weather-bar{flex:1;min-width:18px;border-radius:3px;display:flex;align-items:flex-end;justify-content:center;
+  position:relative;transition:opacity .15s}
+.weather-bar:hover{opacity:1!important;outline:1px solid var(--text3)}
+.weather-bar-label{font-size:9px;color:rgba(0,0,0,0.6);font-weight:600;padding:2px;line-height:1}
+[data-theme="dark"] .weather-bar-label,
+body:not([data-theme]) .weather-bar-label{color:rgba(0,0,0,0.8)}
+.weather-legend-dot{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:3px}
+
+.moon-widget{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:border-color .15s}
+.moon-widget:hover{border-color:var(--border2)}
+.moon-phase-icon{font-size:30px;line-height:1}
+.moon-info .phase-name{font-weight:600;font-size:14px}
+.moon-info .moon-details{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── CHART ───────────────────────────────────────────────────────── */
+.alt-chart-wrap{border-radius:8px;overflow:visible;background:var(--bg3);
+  padding:0;position:relative}
+canvas.alt-chart{display:block;width:100%;border-radius:8px}
+.chart-footer{display:flex;justify-content:space-between;padding:4px 6px 2px;font-size:11px;color:var(--text3)}
+.tz-toggle{cursor:pointer;text-decoration:underline dotted;color:var(--text3)}
+.tz-toggle:hover{color:var(--text2)}
+.chart-legend{display:flex;gap:14px;padding:4px 6px;font-size:11px;color:var(--text2)}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:12px;height:3px;border-radius:2px;display:inline-block}
+
+/* ── MODAL ───────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;
+  width:100%;max-width:740px;max-height:92vh;overflow-y:auto;
+  transform:scale(.96);transition:transform .2s}
+.modal-overlay.open .modal{transform:scale(1)}
+.modal-header{padding:16px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.modal-title{font-size:17px;font-weight:700}
+.modal-sub{font-size:13px;color:var(--text2);margin-top:3px}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;
+  padding:2px;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:16px 18px}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:110px}
+.form-group label{font-size:12px;color:var(--text2);font-weight:500}
+.form-group input,.form-group select,.form-group textarea{width:100%}
+.form-section-title{font-size:11px;color:var(--text3);text-transform:uppercase;
+  letter-spacing:.5px;font-weight:600;margin:12px 0 7px;
+  border-top:1px solid var(--border);padding-top:12px}
+
+/* ── VIS STATS ───────────────────────────────────────────────────── */
+.visib-info{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.visib-stat{background:var(--bg3);border-radius:6px;padding:9px;text-align:center}
+.visib-stat-val{font-size:19px;font-weight:700}
+.visib-stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── PIPELINE ────────────────────────────────────────────────────── */
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:900px){.pipeline{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.pipeline{grid-template-columns:1fr 1fr}}
+.pipeline-col{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.pipeline-header{padding:7px 11px;font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.pipeline-header.h-wishlist{color:#8890b0}.pipeline-header.h-planned{color:#8faaff}
+.pipeline-header.h-captured{color:var(--amber)}.pipeline-header.h-processing{color:var(--teal)}
+.pipeline-header.h-complete{color:#2ecc71}
+.pipeline-items{padding:7px;min-height:50px}
+.pipeline-item{padding:5px 7px;border-radius:5px;font-size:12px;cursor:pointer;
+  margin-bottom:4px;background:var(--bg3);border:1px solid var(--border)}
+.pipeline-item:hover{border-color:var(--border2)}
+.pipeline-item-name{font-weight:500}.pipeline-item-sub{color:var(--text3);font-size:11px}
+
+/* ── SETTINGS ────────────────────────────────────────────────────── */
+.settings-section{background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:16px;margin-bottom:14px}
+.settings-section h3{font-size:14px;font-weight:600;margin-bottom:12px}
+.settings-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap}
+.settings-tab{background:none;border:none;color:var(--text2);padding:10px 16px;cursor:pointer;
+  font-size:13px;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:all .15s;font-weight:500}
+.settings-tab:hover{color:var(--text);background:var(--bg3)}
+.settings-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.settings-panel{display:none}
+.settings-panel.active{display:block}
+.list-item{display:flex;align-items:center;gap:10px;padding:8px 11px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.list-item-info{flex:1}
+.list-item-name{font-size:13px;font-weight:500}
+.list-item-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.list-item-actions{display:flex;gap:5px}
+.default-badge{font-size:10px;padding:1px 7px;border-radius:10px;
+  background:rgba(94,123,248,.2);color:var(--accent);border:1px solid rgba(94,123,248,.3)}
+.section-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.fov-info{font-size:11px;color:var(--teal);margin-top:3px}
+.fit-badge{font-size:10px;padding:1px 6px;border-radius:3px;
+  background:rgba(61,217,138,.15);color:var(--teal);border:1px solid rgba(61,217,138,.25)}
+.mosaic-badge{font-size:10px;padding:1px 6px;border-radius:3px;
+  background:rgba(242,92,92,.15);color:#f99;border:1px solid rgba(242,92,92,.25)}
+
+/* ── MISC ────────────────────────────────────────────────────────── */
+.empty{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty .icon{font-size:44px;margin-bottom:10px}
+.loading{text-align:center;padding:30px;color:var(--text3)}
+.spin{display:inline-block;width:22px;height:22px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{font-size:11px;padding:1px 7px;border-radius:3px;background:var(--bg4);
+  color:var(--text2);border:1px solid var(--border)}
+.astrobin-link a{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);
+  text-decoration:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;transition:all .15s}
+.astrobin-link a:hover{border-color:var(--border2);color:var(--text2);background:var(--bg4)}
+.star-btn{cursor:pointer;font-size:18px;color:var(--text3);transition:color .1s}
+.star-btn.active,.star-btn:hover{color:var(--gold)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+</style>
+</head>
+<body>
+<button id="menu-btn" onclick="toggleMobileMenu()">☰</button>
+<div id="menu-overlay" onclick="toggleMobileMenu()"></div>
+
+<div id="app">
+<div id="sidebar">
+  <div class="logo"><a href="#" onclick="event.preventDefault();goToDashboard()">🔭 Astro<span>Tracker</span></a></div>
+  <div class="nav-item active" data-page="dashboard"><span class="nav-icon">⬡</span>Dashboard</div>
+  <div class="nav-item" data-page="planner"><span class="nav-icon">◎</span>Tonight's Sky</div>
+  <div class="nav-item" data-page="catalog"><span class="nav-icon">☰</span>Catalog</div>
+  <div class="nav-item" data-page="pipeline"><span class="nav-icon">⇢</span>Pipeline</div>
+  <div class="nav-item" data-page="sessions"><span class="nav-icon">📷</span>Sessions</div>
+  <div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>Settings</div>
+</div>
+
+<div id="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header"><div class="page-title">Dashboard</div></div>
+  <div class="page-body">
+    <div class="stat-grid" id="stats-grid"></div>
+    <div id="dash-moon"></div>
+    <div id="dash-recent"></div>
+  </div>
+</div>
+
+<!-- PLANNER -->
+<div class="page" id="page-planner">
+  <div class="page-header">
+    <div class="page-title">Tonight's Sky</div>
+    <select id="planner-location" style="min-width:150px"><option value="">— Location —</option></select>
+    <input type="date" id="planner-date">
+    <button class="btn btn-primary btn-sm" id="planner-load-btn">Load Sky</button>
+    <button class="btn btn-secondary btn-sm" onclick="openColumnPicker()" title="Choose and reorder columns">⋮⋮ Columns</button>
+    <button class="filter-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'✕ Filters':'⚙ Filters'">⚙ Filters</button>
+    <div class="filter-row">
+      <select id="planner-equip" style="min-width:130px"><option value="">— Equipment —</option></select>
+      <select id="planner-type-filter">
+        <option value="">All Types</option>
+        <option value="Galaxy">Galaxies</option>
+        <option value="Emission Nebula">Emission Nebulae</option>
+        <option value="Reflection Nebula">Reflection Nebulae</option>
+        <option value="Dark Nebula">Dark Nebulae</option>
+        <option value="Planetary Nebula">Planetary Nebulae</option>
+        <option value="Supernova Remnant">SNRs</option>
+        <option value="Globular Cluster">Globulars</option>
+        <option value="Open Cluster">Open Clusters</option>
+        <option value="Double Star">Double Stars</option>
+        <option value="Planet">Planets/Moon</option>
+      </select>
+      <select id="planner-filter-filter">
+        <option value="">All Filters</option>
+        <option value="Ha">Ha</option><option value="OIII">OIII</option>
+        <option value="SII">SII</option><option value="SHO">SHO</option>
+        <option value="HaRGB">HaRGB</option><option value="LRGB">LRGB</option>
+        <option value="RGB">RGB</option>
+      </select>
+      <select id="planner-status-filter">
+        <option value="">All Statuses</option>
+        <option value="untracked">Untracked</option>
+        <option value="wishlist">Wishlist</option>
+        <option value="planned">Planned</option>
+        <option value="captured">Captured</option>
+        <option value="complete">Complete</option>
+      </select>
+    </div>
+  </div>
+  <div class="page-body">
+    <div id="planner-top-bar" style="display:none;margin-bottom:10px"></div>
+    <div id="planner-weather"></div>
+    <div id="planner-moon" onclick="openMoonModal()"></div>
+    <div id="planner-content"><div class="empty"><div class="icon">🌙</div>
+      <p>Select a location and click Load Sky.</p></div></div>
+  </div>
+</div>
+
+<!-- CATALOG -->
+<div class="page" id="page-catalog">
+  <div class="page-header">
+    <div class="page-title">Catalog <span id="cat-count" style="font-size:12px;color:var(--text2);font-weight:400"></span></div>
+    <div class="search-bar"><input type="text" id="cat-search" placeholder="Search name, ID, constellation…"><button class="search-clear" onclick="clearSearch('cat-search')">✕</button></div>
+    <button class="btn btn-primary btn-sm" onclick="openAddObjectModal()">+ Add Object</button>
+    <button class="filter-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'✕ Filters':'⚙ Filters'">⚙ Filters</button>
+    <div class="filter-row">
+      <select id="cat-filter-filter">
+        <option value="">All Filters</option>
+        <option value="Ha">Ha</option><option value="OIII">OIII</option>
+        <option value="SII">SII</option><option value="SHO">SHO</option>
+        <option value="HaRGB">HaRGB</option><option value="LRGB">LRGB</option>
+        <option value="RGB">RGB</option>
+      </select>
+      <div class="filter-chips" id="cat-type-chips"></div>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th data-sort="id">ID <span class="sort-arrow">↕</span></th>
+        <th data-sort="name">Name <span class="sort-arrow">↕</span></th>
+        <th data-sort="type">Type <span class="sort-arrow">↕</span></th>
+        <th data-sort="constellation">Const. <span class="sort-arrow">↕</span></th>
+        <th data-sort="ra">RA <span class="sort-arrow">↕</span></th>
+        <th data-sort="dec">Dec <span class="sort-arrow">↕</span></th>
+        <th data-sort="mag">Mag <span class="sort-arrow">↕</span></th>
+        <th data-sort="size">Size <span class="sort-arrow">↕</span></th>
+        <th data-sort="myrating">My ★ <span class="sort-arrow">↕</span></th>
+        <th>Filters</th>
+        <th>Other Names</th>
+        <th>Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="cat-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<div class="page" id="page-pipeline">
+  <div class="page-header">
+    <div class="page-title">Pipeline</div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--text2)">
+      <input type="checkbox" id="pipeline-show-complete"> Show Completed
+    </label>
+  </div>
+  <div class="page-body">
+    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">
+      Click any object in the Catalog or Tonight's Sky, then set a status to add it here.
+    </p>
+    <div class="pipeline" id="pipeline-board"></div>
+  </div>
+</div>
+
+<!-- SESSIONS -->
+<div class="page" id="page-sessions">
+  <div class="page-header">
+    <div class="page-title">Sessions</div>
+    <div class="search-bar"><input type="text" id="sess-search" placeholder="Search target, telescope…"><button class="search-clear" onclick="clearSearch('sess-search')">✕</button></div>
+    <button class="btn btn-primary btn-sm" onclick="openSessionModal()">+ Log Session</button>
+  </div>
+  <div class="page-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Target</th><th>Location</th><th>Telescope</th><th>Camera</th>
+        <th>Filters</th><th>Integration</th><th>Frames</th><th>Notes</th><th>Actions</th></tr></thead>
+      <tbody id="sess-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-header"><div class="page-title">Settings</div></div>
+  <div class="page-body">
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab active" data-tab="locations" onclick="switchSettingsTab('locations')">📍 Locations</button>
+      <button class="settings-tab" data-tab="equipment" onclick="switchSettingsTab('equipment')">🔭 Equipment</button>
+      <button class="settings-tab" data-tab="importexport" onclick="switchSettingsTab('importexport')">📁 Import / Export</button>
+      <button class="settings-tab" data-tab="theme" onclick="switchSettingsTab('theme')">🎨 Theme</button>
+    </div>
+
+    <div class="settings-panel active" id="settings-panel-locations">
+      <div class="settings-section">
+        <div class="section-row"><h3>Observer Locations</h3>
+          <button class="btn btn-primary btn-sm" onclick="openLocationModal()">+ Add Location</button></div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px">
+          Stored in <code>data/locations.json</code> — copy between versions to keep your data.
+        </p>
+        <div id="locations-list"></div>
+      </div>
+    </div>
+
+    <div class="settings-panel" id="settings-panel-equipment">
+      <div class="settings-section">
+        <div class="section-row"><h3>Equipment Sets</h3>
+          <button class="btn btn-primary btn-sm" onclick="openEquipModal()">+ Add Equipment</button></div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px">
+          Stored in <code>data/equipment.json</code> — copy between versions to keep your data.
+        </p>
+        <div id="equipment-list"></div>
+      </div>
+    </div>
+
+    <div class="settings-panel" id="settings-panel-importexport">
+      <div class="settings-section">
+        <h3>Export Custom Catalog</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px">
+          Download your custom-added catalog objects as a CSV file. You can edit this file in
+          Excel or Google Sheets and re-import it below to update your catalog.
+        </p>
+        <button class="btn btn-primary" onclick="exportUserCatalog()">⬇ Download CSV</button>
+        <div id="export-status" style="margin-top:10px;font-size:12px;color:var(--text3)"></div>
+      </div>
+
+      <div class="settings-section" style="margin-top:20px">
+        <h3>Import Custom Catalog</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:8px">
+          Import catalog objects from a CSV file. You'll get a preview showing any duplicates so
+          you can decide how to handle each row.
+        </p>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--text2)">
+          <strong style="color:var(--text)">CSV Format</strong>
+          <ul style="margin:6px 0 6px 18px;padding:0">
+            <li>First row must be the column headers (any order):
+              <code style="font-size:11px">id,name,type,constellation,ra,dec,mag,sizeX,sizeY,filters,otherNames,description</code></li>
+            <li><code>id</code>, <code>name</code>, <code>ra</code>, <code>dec</code> are required</li>
+            <li><strong>RA</strong> is in decimal hours (0–24), <strong>Dec</strong> is in decimal degrees (-90 to +90)</li>
+            <li><strong>filters</strong> uses pipe <code>|</code> to separate values: <code>Ha|OIII|SHO</code></li>
+            <li>Works with standard Excel and Google Sheets exports (Save As → CSV)</li>
+          </ul>
+        </div>
+        <input type="file" id="import-file-input" accept=".csv,text/csv" style="display:none" onchange="previewCSVImport(event)">
+        <button class="btn btn-primary" onclick="document.getElementById('import-file-input').click()">⬆ Choose CSV File</button>
+        <div id="import-status" style="margin-top:10px;font-size:12px;color:var(--text3)"></div>
+      </div>
+    </div>
+
+    <div class="settings-panel" id="settings-panel-theme">
+      <div class="settings-section">
+        <h3>Color Theme</h3>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <select id="theme-select" onchange="applyTheme(this.value);localStorage.setItem('astro-theme',this.value)" style="min-width:160px">
+            <option value="dark">Dark</option>
+            <option value="midnight">Midnight</option>
+            <option value="warm">Warm Dark</option>
+            <option value="light">Light</option>
+          </select>
+          <span style="font-size:12px;color:var(--text2)">Colors defined in <code>public/themes.js</code></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══ OBJECT MODAL ═══ -->
+<div class="modal-overlay" id="obj-modal-overlay" onclick="closeObjModal(event)">
+<div class="modal" style="max-width:760px">
+  <div class="modal-header">
+    <div><div class="modal-title" id="modal-name"></div><div class="modal-sub" id="modal-sub"></div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-secondary btn-sm" id="modal-edit-btn" onclick="toggleCatalogEdit()">Edit Data</button>
+        <button class="modal-close" onclick="closeObjModal()">✕</button>
+      </div>
+      <div class="astrobin-link" id="modal-astrobin"></div>
+    </div>
+  </div>
+  <div class="modal-body">
+    <div class="visib-info" id="modal-vis-info"></div>
+    <div class="alt-chart-wrap">
+      <canvas class="alt-chart" id="modal-alt-chart" height="200"></canvas>
+    </div>
+    <div class="chart-legend" id="chart-legend"></div>
+    <div class="chart-footer">
+      <span id="chart-date-label" style="color:var(--text3)"></span>
+      <span class="tz-toggle" id="tz-toggle" onclick="toggleChartTZ()">Local time ↔ UTC</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
+      <div>
+        <div class="form-section-title" style="margin-top:0;padding-top:0;border:none">Object Info</div>
+        <div id="modal-obj-info" style="font-size:13px;line-height:1.9;color:var(--text2)"></div>
+      </div>
+      <div>
+        <div class="form-section-title" style="margin-top:0;padding-top:0;border:none">Guide Rating</div>
+        <div id="modal-guide-stars" style="margin-bottom:8px"></div>
+        <div class="form-section-title" style="margin-top:0;padding-top:0;border:none">Recommended Filters</div>
+        <div id="modal-filters" class="td-filters" style="margin-bottom:10px"></div>
+        <div class="form-section-title" style="margin-top:0;padding-top:0;border:none">Description</div>
+        <div id="modal-description" style="font-size:13px;color:var(--text2);line-height:1.6"></div>
+      </div>
+    </div>
+
+    <div id="catalog-edit-form" style="display:none;margin-top:12px">
+      <div class="form-section-title">Edit Catalog Data</div>
+      <div class="form-row">
+        <div class="form-group"><label>Magnitude</label><input type="number" step="0.1" id="edit-mag"></div>
+        <div class="form-group"><label>Size X (arcmin)</label><input type="number" step="0.1" id="edit-sx"></div>
+        <div class="form-group"><label>Size Y (arcmin)</label><input type="number" step="0.1" id="edit-sy"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>RA (decimal hours)</label><input type="number" step="0.0001" id="edit-ra"></div>
+        <div class="form-group"><label>Dec (decimal degrees)</label><input type="number" step="0.0001" id="edit-dec"></div>
+        <div class="form-group" style="flex:2"><label>Filters (comma separated)</label><input type="text" id="edit-filters"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn btn-primary btn-sm" onclick="saveCatalogEdit()">Save Override</button>
+        <button class="btn btn-danger btn-sm" id="modal-reset-btn" onclick="resetCatalogEdit()" style="display:none">Reset to Default</button>
+      </div>
+    </div>
+
+    <div class="form-section-title">Target Tracking</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+      <div class="form-group" style="min-width:160px;flex:0">
+        <label>Status</label>
+        <select id="modal-status">
+          <option value="">— Remove from Pipeline —</option>
+          <option value="wishlist">Wishlist</option>
+          <option value="planned">Planned</option>
+          <option value="captured">Captured</option>
+          <option value="processing">Processing</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:2;min-width:160px">
+        <label>Notes</label>
+        <textarea id="modal-notes" rows="2" placeholder="Notes…"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">My Rating</label>
+        <div id="modal-user-stars" style="display:flex;gap:3px">
+          <span class="star-btn" onclick="setUserStar(1)">★</span><span class="star-btn" onclick="setUserStar(2)">★</span>
+          <span class="star-btn" onclick="setUserStar(3)">★</span><span class="star-btn" onclick="setUserStar(4)">★</span>
+          <span class="star-btn" onclick="setUserStar(5)">★</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="openSessionModal(currentObjId)">Log Session</button>
+    <button class="btn btn-primary" onclick="saveTargetModal()">Save Tracking</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SESSION MODAL ═══ -->
+<div class="modal-overlay" id="sess-modal-overlay" onclick="closeSessModal(event)">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title" id="sess-modal-title">Log Imaging Session</div>
+    <button class="modal-close" onclick="closeSessModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-row">
+      <div class="form-group"><label>Target</label><input type="text" id="sess-target" placeholder="e.g. M42"></div>
+      <div class="form-group"><label>Date</label><input type="date" id="sess-date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Observing Location</label><input type="text" id="sess-location" placeholder="e.g. Backyard, Cherry Springs SP"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Equipment Set</label>
+        <select id="sess-equip-select" onchange="fillEquipFields()"><option value="">— Manual Entry —</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Telescope / OTA</label><input type="text" id="sess-telescope"></div>
+      <div class="form-group" style="flex:2"><label>Camera</label><input type="text" id="sess-camera"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Filters Used</label><input type="text" id="sess-filters" placeholder="e.g. Ha, L"></div>
+      <div class="form-group"><label>Integration (min)</label><input type="number" id="sess-integration"></div>
+      <div class="form-group"><label>Frame Count</label><input type="number" id="sess-frames"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Gain</label><input type="number" id="sess-gain"></div>
+      <div class="form-group"><label>Bortle</label><input type="number" min="1" max="9" id="sess-bortle"></div>
+      <div class="form-group"><label>Seeing</label>
+        <select id="sess-seeing"><option value="">—</option><option>Excellent</option><option>Good</option><option>Average</option><option>Poor</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Notes</label><textarea id="sess-notes" rows="2"></textarea></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeSessModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveSession()">Save Session</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ LOCATION MODAL ═══ -->
+<div class="modal-overlay" id="loc-modal-overlay" onclick="closeLocModal(event)">
+<div class="modal" style="max-width:500px">
+  <div class="modal-header">
+    <div class="modal-title" id="loc-modal-title">Add Location</div>
+    <button class="modal-close" onclick="closeLocModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group" style="flex:2"><label>Name</label><input type="text" id="loc-name"></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Latitude</label><input type="number" step="0.0001" id="loc-lat" placeholder="e.g. 39.9612"></div>
+      <div class="form-group"><label>Longitude</label><input type="number" step="0.0001" id="loc-lon" placeholder="e.g. -82.9988"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Bortle Class</label><input type="number" min="1" max="9" id="loc-bortle"></div>
+      <div class="form-group"><label>Min Altitude (°)</label><input type="number" min="0" max="60" id="loc-minalt" value="20"></div>
+    </div>
+    <div class="form-row"><div class="form-group" style="flex:2"><label>Notes</label><input type="text" id="loc-notes"></div></div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-top:6px">
+      <input type="checkbox" id="loc-default"> Set as default location
+    </label>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeLocModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveLocation()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ EQUIPMENT MODAL ═══ -->
+<div class="modal-overlay" id="equip-modal-overlay" onclick="closeEquipModal(event)">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title" id="equip-modal-title">Add Equipment Set</div>
+    <button class="modal-close" onclick="closeEquipModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group" style="flex:2"><label>Set Name</label><input type="text" id="equip-name"></div></div>
+    <div class="form-section-title" style="margin-top:0;padding-top:0;border:none">Optics</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Telescope / OTA</label><input type="text" id="equip-scope"></div>
+      <div class="form-group"><label>Focal Length (mm)</label><input type="number" id="equip-fl"></div>
+      <div class="form-group"><label>Aperture (mm)</label><input type="number" id="equip-ap"></div>
+    </div>
+    <div class="form-section-title">Mount</div>
+    <div class="form-row"><div class="form-group"><label>Mount</label><input type="text" id="equip-mount"></div></div>
+    <div class="form-section-title">Camera / Sensor</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Camera</label><input type="text" id="equip-camera"></div>
+      <div class="form-group"><label>Pixel Size (µm)</label><input type="number" step="0.01" id="equip-pixel"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Sensor Width (mm)</label><input type="number" step="0.01" id="equip-sw"></div>
+      <div class="form-group"><label>Sensor Height (mm)</label><input type="number" step="0.01" id="equip-sh"></div>
+    </div>
+    <div id="equip-fov-preview" style="font-size:11px;color:var(--teal);margin-bottom:8px"></div>
+    <div class="form-row"><div class="form-group" style="flex:2"><label>Notes</label><input type="text" id="equip-notes"></div></div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-top:6px">
+      <input type="checkbox" id="equip-default"> Set as default
+    </label>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeEquipModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveEquipment()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ COLUMN PICKER MODAL ═══ -->
+<div class="modal-overlay" id="colpick-overlay" onclick="closeColumnPicker(event)">
+<div class="modal" style="max-width:420px">
+  <div class="modal-header">
+    <div class="modal-title">Tonight's Sky Columns</div>
+    <button class="modal-close" onclick="closeColumnPicker()">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+      Drag to reorder. Check the columns you want to see. Saved across devices.
+    </p>
+    <div id="colpick-list" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div style="margin-top:14px">
+      <button class="btn btn-secondary btn-sm" onclick="resetColumnsToDefault()">Reset to Default</button>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeColumnPicker()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveColumnPicker()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ CSV IMPORT PREVIEW / RESOLUTION MODAL ═══ -->
+<div class="modal-overlay" id="csv-import-overlay" onclick="closeCsvImport(event)">
+<div class="modal" style="max-width:1100px">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title">Review CSV Import</div>
+      <div class="modal-sub" id="csv-import-summary"></div>
+    </div>
+    <button class="modal-close" onclick="closeCsvImport()">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      Review each row below. New rows import directly; duplicates and possible duplicates let you
+      choose what to do. Nothing is saved until you click <strong>Confirm Import</strong>.
+    </p>
+    <div class="table-wrap" style="max-height:60vh;overflow:auto">
+      <table id="csv-import-table" style="font-size:12px">
+        <thead>
+          <tr>
+            <th style="width:40px">Row</th>
+            <th>Status</th>
+            <th>ID / Name</th>
+            <th>Type</th>
+            <th>Coords</th>
+            <th style="min-width:220px">Action</th>
+          </tr>
+        </thead>
+        <tbody id="csv-import-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeCsvImport()">Cancel</button>
+    <button class="btn btn-primary" id="csv-import-confirm-btn" onclick="confirmCsvImport()">Confirm Import</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ ADD / EDIT CUSTOM OBJECT MODAL ═══ -->
+<div class="modal-overlay" id="addobj-modal-overlay" onclick="closeAddObjectModal(event)">
+<div class="modal" style="max-width:600px">
+  <div class="modal-header">
+    <div class="modal-title" id="addobj-modal-title">Add Custom Object</div>
+    <button class="modal-close" onclick="closeAddObjectModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+      Add any object not in the built-in catalog. RA and Dec are required for visibility calculations.
+    </p>
+    <div class="form-row">
+      <div class="form-group"><label>ID / Designation *</label><input type="text" id="ao-id" placeholder="e.g. NGC 12345, My Nebula"></div>
+      <div class="form-group" style="flex:2"><label>Common Name *</label><input type="text" id="ao-name" placeholder="e.g. Foo Bar Nebula"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="ao-type">
+          <option>Galaxy</option><option>Emission Nebula</option><option>Reflection Nebula</option>
+          <option>Dark Nebula</option><option>Planetary Nebula</option><option>Supernova Remnant</option>
+          <option>Globular Cluster</option><option>Open Cluster</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Constellation</label><input type="text" id="ao-const" placeholder="e.g. Orion"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>RA (decimal hours) *</label><input type="number" step="0.0001" id="ao-ra" placeholder="e.g. 5.5878"></div>
+      <div class="form-group"><label>Dec (decimal degrees) *</label><input type="number" step="0.0001" id="ao-dec" placeholder="e.g. -5.39"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Magnitude</label><input type="number" step="0.1" id="ao-mag" placeholder="e.g. 8.4"></div>
+      <div class="form-group"><label>Size X (arcmin)</label><input type="number" step="0.1" id="ao-sx" placeholder="e.g. 30"></div>
+      <div class="form-group"><label>Size Y (arcmin)</label><input type="number" step="0.1" id="ao-sy" placeholder="e.g. 20"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Filters (comma separated)</label><input type="text" id="ao-filters" placeholder="e.g. Ha, OIII, SII"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Other Names / Designations</label><input type="text" id="ao-other" placeholder="e.g. Sh2-99, IC 1234"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Description</label><textarea id="ao-desc" rows="2" placeholder="Notes about this object…"></textarea></div>
+    </div>
+  </div>
+  <div class="modal-footer" id="addobj-footer">
+    <button class="btn btn-secondary" onclick="closeAddObjectModal()">Cancel</button>
+    <button class="btn btn-primary" id="addobj-save-btn" onclick="saveCustomObject()">Add to Catalog</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let catalog=[], planetCatalog=[], targets={}, locations=[], equipment=[], sessions=[];
+let plannerData=null, plannerPlanets=[];
+let currentObjId=null, currentObjSolar=null, currentObjProfile=null;
+let currentObjMoonSepProfile=null, currentObjMinAlt=20;
+let editingSessionId=null, editingLocId=null, editingEquipId=null;
+let userStarRating=0, chartShowUTC=false;
+let catSortKey='id', catSortDir=1, catTypeFilter='', catSearchQ='', catFilterFilter='';
+
+const TYPE_COLORS={
+  'Galaxy':'var(--c-galaxy)','Emission Nebula':'var(--c-emission)',
+  'Reflection Nebula':'var(--c-reflection)','Dark Nebula':'var(--c-dark)',
+  'Planetary Nebula':'var(--c-planetary)','Supernova Remnant':'var(--c-snr)',
+  'Globular Cluster':'var(--c-globular)','Open Cluster':'var(--c-open)',
+  'Double Star':'var(--amber)','Planet':'var(--gold)','Natural Satellite':'var(--gold)'
+};
+const PLANET_IDS=['Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune'];
+
+function typeClass(t){return 'td-'+(t||'').split(' ')[0]}
+function typeColor(t){return TYPE_COLORS[t]||'var(--text3)'}
+function filterClass(f){
+  const m={Ha:'ha',OIII:'oiii',SII:'sii',LRGB:'lrgb',RGB:'lrgb',
+    NB:'oiii',SHO:'sii',HaRGB:'ha',HaOIII:'oiii'};
+  return m[f]||'';
+}
+function filterTags(arr){return(arr||[]).map(f=>`<span class="filter-tag ${filterClass(f)}">${f}</span>`).join('')}
+function starHTML(n,max=5){let s='';for(let i=1;i<=max;i++)s+=`<span${i<=n?' class="lit"':''}>★</span>`;return`<div class="stars">${s}</div>`}
+function fmtRA(ra){if(ra==null)return'—';const h=Math.floor(ra),m=Math.floor((ra-h)*60),s=Math.round(((ra-h)*60-m)*60);return`${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`}
+function fmtDec(dec){if(dec==null)return'—';const sign=dec>=0?'+':'-',ad=Math.abs(dec),d=Math.floor(ad),m=Math.floor((ad-d)*60),s=Math.round(((ad-d)*60-m)*60);return`${sign}${String(d).padStart(2,'0')}° ${String(m).padStart(2,'0')}' ${String(s).padStart(2,'0')}"`}
+function fmtSize(x,y){if(!x)return'—';if(!y||x===y)return x+"'";return`${x}' × ${y}'`}
+function fmtMag(m){return(m==null||m===99)?'—':m}
+function moonPhaseIcon(ill){if(ill<0.03)return'🌑';if(ill<0.22)return'🌒';if(ill<0.47)return'🌓';if(ill<0.78)return'🌔';if(ill<0.97)return'🌕';return'🌖'}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function calcFOV(w,h,fl){if(!w||!h||!fl)return null;return{w:Math.round(w/fl*(180/Math.PI)*60*10)/10,h:Math.round(h/fl*(180/Math.PI)*60*10)/10}}
+// Arcsec per pixel (item 7): (pixel_size_µm / focal_length_mm) * 206.265
+function calcArcsecPerPixel(pixelSize, focalLength){
+  if(!pixelSize||!focalLength)return null;
+  return Math.round((pixelSize/focalLength)*206.265*100)/100;
+}
+// Clear search input and trigger input event (item 9)
+function clearSearch(id){
+  const el=document.getElementById(id);
+  el.value='';
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+  el.closest('.search-bar').classList.remove('has-text');
+  el.focus();
+}
+// Attach toggle of has-text class to all search inputs
+function wireSearchClears(){
+  document.querySelectorAll('.search-bar input').forEach(inp=>{
+    const wrap=inp.closest('.search-bar');
+    const upd=()=>wrap.classList.toggle('has-text',!!inp.value);
+    inp.addEventListener('input',upd);
+    upd();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MOBILE MENU
+// ═══════════════════════════════════════════════════════════════════
+function toggleMobileMenu(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('menu-overlay').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+// Logo click handler — behaves like clicking the Dashboard nav item.
+function goToDashboard(){
+  const item=document.querySelector('.nav-item[data-page="dashboard"]');
+  if(item)item.click();
+}
+
+document.querySelectorAll('.nav-item').forEach(el=>{
+  el.addEventListener('click',()=>{
+    // Close mobile menu
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('menu-overlay').classList.remove('open');
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('page-'+el.dataset.page).classList.add('active');
+    if(el.dataset.page==='dashboard')loadDashboard();
+    if(el.dataset.page==='catalog')renderCatalog();
+    if(el.dataset.page==='pipeline')renderPipeline();
+    if(el.dataset.page==='sessions')loadSessions();
+    if(el.dataset.page==='settings')loadSettings();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+async function init(){
+  loadSavedTheme();
+  try{const t=localStorage.getItem('astro-theme');if(t)document.getElementById('theme-select').value=t;}catch(e){}
+  document.getElementById('planner-date').value=todayStr();
+  try{
+    await Promise.all([loadCatalog(),loadTargets(),loadLocations(),loadEquipment(),loadPlanetCatalog(),loadPlannerPrefs()]);
+  }catch(e){console.error('Init load error:',e)}
+  loadDashboard();
+  renderCatalog();
+  renderCatalogTypeChips();
+  loadPlannerDropdowns();
+  setupEquipFOVLive();
+  wireSearchClears();
+}
+
+async function loadCatalog(){const r=await fetch('api/catalog.php');catalog=await r.json()}
+async function loadTargets(){const r=await fetch('api/targets.php');const a=await r.json();targets={};a.forEach(t=>targets[t.id]=t)}
+async function loadLocations(){const r=await fetch('api/locations.php');locations=await r.json()}
+async function loadEquipment(){const r=await fetch('api/equipment.php');equipment=await r.json()}
+async function loadPlanetCatalog(){
+  try{const r=await fetch('api/planet-catalog.php');planetCatalog=await r.json();}
+  catch(e){planetCatalog=[];}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+async function loadDashboard(){
+  const r=await fetch('api/stats.php');const stats=await r.json();
+  const sm={};(stats.byStatus||[]).forEach(s=>sm[s.status]=s.c);
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-value">${stats.totalTracked}</div><div class="stat-label">Tracked</div></div>
+    <div class="stat-card"><div class="stat-value">${sm.complete||0}</div><div class="stat-label">Complete</div></div>
+    <div class="stat-card"><div class="stat-value">${sm.captured||0}</div><div class="stat-label">Captured</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.totalSessions}</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-card"><div class="stat-value">${Math.round((stats.totalIntegration/60)*10)/10}h</div><div class="stat-label">Integration</div></div>
+    <div class="stat-card"><div class="stat-value">${catalog.length}</div><div class="stat-label">Catalog Objects</div></div>`;
+  const defLoc=locations.find(l=>l.is_default)||locations[0];
+  if(defLoc){
+    const mv=await fetch(`api/visibility.php?lat=${defLoc.lat}&lon=${defLoc.lon}&min_altitude=${defLoc.min_altitude||20}`);
+    const md=await mv.json();
+    const pct=Math.round(md.moon.illumination*100);
+    document.getElementById('dash-moon').innerHTML=`<div class="moon-widget" onclick="jumpToMoonChart()" title="Click to open Moon visibility chart">
+      <div class="moon-phase-icon">${moonPhaseIcon(md.moon.illumination)}</div>
+      <div class="moon-info"><div class="phase-name">${md.moon.name}
+        <span style="font-size:11px;color:var(--text3);margin-left:8px">↗ click for chart</span></div>
+      <div class="moon-details">${pct}% illuminated · Alt: ${md.moonAltitude}° · ${defLoc.name}</div></div></div>`;
+  }
+  if(stats.recentSessions&&stats.recentSessions.length>0){
+    let h='<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Recent Sessions</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Target</th><th>Telescope</th><th>Integration</th></tr></thead><tbody>';
+    stats.recentSessions.forEach(s=>{
+      const obj=catalog.find(c=>c.id===s.target_id);
+      h+=`<tr><td>${s.session_date}</td><td>${obj?obj.name:s.target_id}</td><td>${s.telescope||'—'}</td><td>${s.integration_time?s.integration_time+'m':'—'}</td></tr>`;
+    });
+    document.getElementById('dash-recent').innerHTML=h+'</tbody></table></div>';
+  }else{document.getElementById('dash-recent').innerHTML='<div class="empty"><div class="icon">📷</div><p>No sessions yet.</p></div>'}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PLANNER
+// ═══════════════════════════════════════════════════════════════════
+function loadPlannerDropdowns(){
+  const ls=document.getElementById('planner-location');
+  ls.innerHTML='<option value="">— Select Location —</option>';
+  locations.forEach(l=>{
+    const o=document.createElement('option');
+    o.value=l.id;o.textContent=l.name+(l.bortle?` (B${l.bortle})`:'');
+    if(l.is_default)o.selected=true;ls.appendChild(o);
+  });
+  const es=document.getElementById('planner-equip');
+  es.innerHTML='<option value="">— No Equipment —</option>';
+  equipment.forEach(e=>{
+    const o=document.createElement('option');o.value=e.id;o.textContent=e.name;
+    if(e.is_default)o.selected=true;es.appendChild(o);
+  });
+}
+
+document.getElementById('planner-load-btn').addEventListener('click',loadPlanner);
+
+async function loadPlanner(){
+  const locId=document.getElementById('planner-location').value;
+  const date=document.getElementById('planner-date').value;
+  if(!locId){alert('Please select a location.');return}
+  const loc=locations.find(l=>l.id==locId);
+  if(!loc)return;
+  const btn=document.getElementById('planner-load-btn');
+  btn.textContent='Loading…';btn.disabled=true;
+  try{
+    const r=await fetch(`api/visibility.php?lat=${loc.lat}&lon=${loc.lon}&date=${date}&min_altitude=${loc.min_altitude||20}`);
+    plannerData=await r.json();
+    plannerPlanets=plannerData.planets||[];
+    const pct=Math.round(plannerData.moon.illumination*100);
+    const solar=plannerData.solar||{};
+    const fmtS=t=>t?new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
+    document.getElementById('planner-moon').innerHTML=`<div class="moon-widget">
+      <div class="moon-phase-icon">${moonPhaseIcon(plannerData.moon.illumination)}</div>
+      <div class="moon-info">
+        <div class="phase-name">${plannerData.moon.name} · ${pct}% illuminated
+          <span style="font-size:11px;color:var(--text3);margin-left:8px">↗ click for chart</span></div>
+        <div class="moon-details">Sunset: ${fmtS(solar.sunset)} · Astro Dusk: ${fmtS(solar.astroDusk)} · Astro Dawn: ${fmtS(solar.astroDawn)} · Sunrise: ${fmtS(solar.sunrise)}</div>
+      </div></div>`;
+    renderPlannerTable();
+    // Load weather in background (non-blocking)
+    loadWeather(loc, date, solar);
+  }catch(e){
+    document.getElementById('planner-content').innerHTML=`<div class="empty"><div class="icon">⚠️</div><p>Error loading sky data: ${e.message}</p></div>`;
+  }
+  btn.textContent='Load Sky';btn.disabled=false;
+}
+
+async function loadWeather(loc, dateStr, solar){
+  const wEl=document.getElementById('planner-weather');
+  wEl.innerHTML=`<div class="weather-widget loading-state"><div class="spin" style="width:16px;height:16px"></div>
+    <span style="color:var(--text3);font-size:12px">Loading weather from Open-Meteo…</span></div>`;
+  try{
+    const r=await fetch(`api/weather.php?lat=${loc.lat}&lon=${loc.lon}`);
+    if(!r.ok) throw new Error('Weather unavailable');
+    const w=await r.json();
+    renderWeatherWidget(w, solar, wEl);
+  }catch(e){
+    wEl.innerHTML=`<div class="weather-widget"><span style="color:var(--text3);font-size:12px">⛅ Weather unavailable (${e.message})</span></div>`;
+  }
+}
+
+function renderWeatherWidget(w, solar, el){
+  const h=w.hourly;
+  if(!h||!h.time||!h.time.length){el.innerHTML='';return}
+  // Dark window boundaries
+  const duskMs=solar.astroDusk?new Date(solar.astroDusk).getTime():null;
+  const dawnMs=solar.astroDawn?new Date(solar.astroDawn).getTime():null;
+  // Build hourly strip for the night (sunset-ish to sunrise-ish, or next 12 hours if not loaded)
+  const sunsetMs=solar.sunset?new Date(solar.sunset).getTime():Date.now();
+  const sunriseMs=solar.sunrise?new Date(solar.sunrise).getTime():sunsetMs+12*3600000;
+  const nightHours=h.time.map((t,i)=>({
+    t:new Date(t).getTime(),
+    cloud:h.cloud_cover?h.cloud_cover[i]:null,
+    cloudLow:h.cloud_cover_low?h.cloud_cover_low[i]:null,
+    cloudMid:h.cloud_cover_mid?h.cloud_cover_mid[i]:null,
+    cloudHigh:h.cloud_cover_high?h.cloud_cover_high[i]:null,
+    temp:h.temperature_2m?h.temperature_2m[i]:null,
+    humidity:h.relative_humidity_2m?h.relative_humidity_2m[i]:null,
+    dew:h.dew_point_2m?h.dew_point_2m[i]:null,
+    wind:h.wind_speed_10m?h.wind_speed_10m[i]:null,
+    precip:h.precipitation_probability?h.precipitation_probability[i]:null,
+  })).filter(x=>x.t>=sunsetMs-3600000 && x.t<=sunriseMs+3600000);
+  if(!nightHours.length){el.innerHTML='';return}
+
+  // Darkness avg (between dusk and dawn only)
+  const darkSamples=nightHours.filter(x=>duskMs&&dawnMs&&x.t>=duskMs&&x.t<=dawnMs);
+  const avgCloud=darkSamples.length?Math.round(darkSamples.reduce((s,x)=>s+(x.cloud||0),0)/darkSamples.length):null;
+  const clearPct=avgCloud!=null?100-avgCloud:null;
+
+  // Build segment strip — one bar per hour, colored by cloud cover
+  const stripHtml=nightHours.map(x=>{
+    const c=x.cloud==null?-1:x.cloud;
+    const color=c<0?'var(--bg4)':c<=20?'var(--green)':c<=50?'var(--amber)':c<=80?'#f08040':'var(--red)';
+    const inDark=duskMs&&dawnMs&&x.t>=duskMs&&x.t<=dawnMs;
+    const hour=new Date(x.t).toLocaleTimeString([],{hour:'2-digit'});
+    const tip=`${new Date(x.t).toLocaleString([],{hour:'2-digit',minute:'2-digit'})}: ${c<0?'n/a':c+'% cloud'}${x.temp!=null?', '+Math.round(x.temp)+'°':''}${x.humidity!=null?', '+Math.round(x.humidity)+'% RH':''}${x.wind!=null?', wind '+Math.round(x.wind)+' km/h':''}${x.precip!=null?', '+x.precip+'% precip':''}`;
+    return `<div class="weather-bar" title="${tip}" style="background:${color};opacity:${inDark?1:0.45}">
+      <div class="weather-bar-label">${hour}</div>
+    </div>`;
+  }).join('');
+
+  const rating = clearPct==null ? 'unknown' : clearPct>=80 ? 'Clear' : clearPct>=50 ? 'Partly cloudy' : clearPct>=20 ? 'Mostly cloudy' : 'Overcast';
+  const ratingColor = clearPct==null ? 'var(--text3)' : clearPct>=80 ? 'var(--green)' : clearPct>=50 ? 'var(--amber)' : 'var(--red)';
+
+  el.innerHTML=`<div class="weather-widget" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+      <div>
+        <div style="font-weight:600;font-size:13px">⛅ Tonight's Weather</div>
+        <div style="font-size:11px;color:var(--text2)">${clearPct!=null?`${clearPct}% average clear during dark hours · `:''}<span style="color:${ratingColor}">${rating}</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--text3)">Data: <a href="https://open-meteo.com/" target="_blank" rel="noopener" style="color:var(--text3)">Open-Meteo</a></div>
+    </div>
+    <div class="weather-strip">${stripHtml}</div>
+    <div class="weather-legend" style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--text3)">
+      <span><span class="weather-legend-dot" style="background:var(--green)"></span> 0-20%</span>
+      <span><span class="weather-legend-dot" style="background:var(--amber)"></span> 21-50%</span>
+      <span><span class="weather-legend-dot" style="background:#f08040"></span> 51-80%</span>
+      <span><span class="weather-legend-dot" style="background:var(--red)"></span> 81-100%</span>
+      <span style="margin-left:auto;opacity:.6">Faded hours = before dusk/after dawn</span>
+    </div>
+  </div>`;
+}
+
+function openMoonModal(){if(plannerData)openObjModal('Moon')}
+
+// Click handler for the dashboard's moon widget. Navigates to Tonight's Sky,
+// ensures sky data is loaded for the default location, then opens the Moon modal.
+async function jumpToMoonChart(){
+  const defLoc=locations.find(l=>l.is_default)||locations[0];
+  if(!defLoc){alert('Add a location in Settings first.');return}
+  // Switch to the planner page
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelector('[data-page="planner"]').classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-planner').classList.add('active');
+  // Make sure the location is selected in the planner dropdown
+  const locSel=document.getElementById('planner-location');
+  if(!locSel.value)locSel.value=defLoc.id;
+  // Load the sky (if not already loaded for this location+date)
+  if(!plannerData){
+    await loadPlanner();
+  }
+  // Now open the Moon modal
+  if(plannerData)openObjModal('Moon');
+}
+
+function getPlannerEquip(){
+  const id=document.getElementById('planner-equip').value;
+  return id?equipment.find(e=>e.id==id)||null:null;
+}
+
+// ─── PLANNER COLUMNS ──────────────────────────────────────────────────────────
+// Each column: key, label, sortKey (optional — if not present, column isn't sortable),
+// render(ctx) -> HTML for cell. ctx={vis,status,isPlanet,tgt,fov,fovCalc,isMoon}
+const PLANNER_COL_DEFS = {
+  name:   { key:'name', label:'Name', sortKey:'name', render:c => `<div style="display:flex;align-items:center;gap:6px">${c.isPlanet?`<span style="font-size:14px">${c.vis.id==='Moon'?'🌙':'●'}</span>`:`<div class="type-dot ${typeClass(c.vis.type)}"></div>`}<div><div class="td-name">${c.vis.name}</div><div class="td-id">${c.isPlanet?c.vis.type:c.vis.id}</div></div></div>` },
+  type:   { key:'type', label:'Type', sortKey:'type', render:c => `<span style="color:${c.isPlanet?'var(--gold)':typeColor(c.vis.type)};font-size:12px">${c.vis.type}</span>` },
+  peak:   { key:'peak', label:'Peak Alt', sortKey:'peak', render:c => {const col=c.vis.peakAltitude>=60?'var(--green)':c.vis.peakAltitude>=30?'var(--amber)':'var(--text2)';return `<span style="color:${col};font-weight:600">${c.vis.peakAltitude}°</span>`} },
+  hours:  { key:'hours', label:'Hrs', sortKey:'hours', render:c => `${c.vis.hoursVisible}h` },
+  peakt:  { key:'peakt', label:'Peak Time', sortKey:'peakt', render:c => {const t=c.vis.peakTime?new Date(c.vis.peakTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';return `<span style="color:var(--text2);font-size:12px">${t}</span>`} },
+  moonsep:{ key:'moonsep', label:'Moon Sep', sortKey:'moonsep', render:c => {if(c.vis.id==='Moon')return '<span style="color:var(--text3)">—</span>';const col=c.vis.moonSeparation>=60?'var(--green)':c.vis.moonSeparation>=30?'var(--amber)':'var(--red)';return `<span style="color:${col}">${c.vis.moonSeparation}°</span>`} },
+  mag:    { key:'mag', label:'Mag', sortKey:'mag', render:c => `<span style="color:var(--text2)">${fmtMag(c.vis.mag)}</span>` },
+  size:   { key:'size', label:'Size', sortKey:'size', render:c => `<span style="color:var(--text2);font-size:12px">${c.vis.id==='Moon'?"~30'":fmtSize(c.vis.sizeX,c.vis.sizeY)}</span>` },
+  rating: { key:'rating', label:'My ★', sortKey:'rating', render:c => starHTML((c.tgt||{}).rating||0) },
+  filters:{ key:'filters', label:'Filters', render:c => `<div class="td-filters">${filterTags(c.vis.filters)}</div>` },
+  const:  { key:'const', label:'Const.', sortKey:'const', render:c => `<span style="color:var(--text2)">${c.vis.constellation||'—'}</span>` },
+  ra:     { key:'ra', label:'RA', sortKey:'ra', render:c => `<span style="font-size:11px;color:var(--text2);font-family:monospace">${c.vis.ra!=null?fmtRA(c.vis.ra):'—'}</span>` },
+  dec:    { key:'dec', label:'Dec', sortKey:'dec', render:c => `<span style="font-size:11px;color:var(--text2);font-family:monospace">${c.vis.dec!=null?fmtDec(c.vis.dec):'—'}</span>` },
+  fov:    { key:'fov', label:'Frame', render:c => {if(!c.fovCalc)return '<span style="color:var(--text3)">—</span>';if(c.isPlanet||!c.vis.sizeX)return '<span style="color:var(--text3)">—</span>';const fits=c.vis.sizeX<=c.fovCalc.w&&c.vis.sizeY<=c.fovCalc.h;return `<span class="${fits?'fit-badge':'mosaic-badge'}">${fits?'Fits':'Mosaic'}</span>`} },
+  status: { key:'status', label:'Status', sortKey:'status', render:c => c.status!=='untracked'?`<span class="badge badge-${c.status}">${c.status}</span>`:'' },
+  action: { key:'action', label:'Wishlist', render:c => {const escId=c.vis.id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return `<button class="btn-track" onclick="event.stopPropagation();quickWishlist('${escId}')" title="Add to wishlist">♡</button>`} },
+};
+
+const PLANNER_COLS_DEFAULT = ['name','type','peak','hours','peakt','moonsep','mag','size','rating','filters','status','action'];
+
+let plannerCols = PLANNER_COLS_DEFAULT.slice();
+let plannerSortKey = 'peak';
+let plannerSortDir = -1; // -1 = descending (highest first)
+
+function getSortValue(vis, tgt, key){
+  switch(key){
+    case 'name':    return (vis.name||'').toLowerCase();
+    case 'type':    return vis.type||'';
+    case 'peak':    return vis.peakAltitude||0;
+    case 'hours':   return vis.hoursVisible||0;
+    case 'peakt':   return vis.peakTime?new Date(vis.peakTime).getTime():0;
+    case 'moonsep': return vis.id==='Moon'?-1:(vis.moonSeparation||0);
+    case 'mag':     return (vis.mag==null||vis.mag===99)?999:vis.mag;
+    case 'size':    return (vis.sizeX||0)*(vis.sizeY||vis.sizeX||0);
+    case 'rating':  return (tgt||{}).rating||0;
+    case 'const':   return vis.constellation||'';
+    case 'ra':      return vis.ra||0;
+    case 'dec':     return vis.dec||0;
+    case 'status':  return (tgt||{}).status||'';
+    default:        return 0;
+  }
+}
+
+function renderPlannerTable(){
+  if(!plannerData)return;
+  try{
+    const typeFilter=document.getElementById('planner-type-filter').value;
+    const statusFilter=document.getElementById('planner-status-filter').value;
+    const filterFilter=document.getElementById('planner-filter-filter').value;
+    const eq=getPlannerEquip();
+    const fovCalc=eq?calcFOV(eq.sensor_width,eq.sensor_height,eq.focal_length):null;
+
+    // DSOs
+    let dsoItems=(plannerData.visibility||[]).map(vis=>{
+      const tgt=targets[vis.id];
+      return{vis,tgt,status:tgt?tgt.status:'untracked',isPlanet:false};
+    }).filter(item=>{
+      if(typeFilter&&typeFilter!=='Planet/Moon'&&typeFilter!=='Planet'&&item.vis.type!==typeFilter)return false;
+      if((typeFilter==='Planet/Moon'||typeFilter==='Planet'))return false;
+      if(statusFilter&&item.status!==statusFilter)return false;
+      if(filterFilter&&!(item.vis.filters||[]).includes(filterFilter))return false;
+      return true;
+    });
+
+    // Planets/Moon
+    let solarItems=[];
+    if(!typeFilter||typeFilter==='Planet'||typeFilter==='Planet/Moon'){
+      solarItems=plannerPlanets.map(p=>({
+        vis:{...p,id:p.name,name:p.name,type:'Planet',filters:[],sizeX:0,sizeY:0,mag:null,starRating:0},
+        tgt:targets[p.name]||null,status:(targets[p.name]||{}).status||'untracked',isPlanet:true
+      }));
+      const moonProfAbove=(plannerData.moonProfile||[]).filter(p=>{
+        const loc=locations.find(l=>l.id==document.getElementById('planner-location').value)||locations.find(l=>l.is_default)||locations[0];
+        return p.alt>=(loc?loc.min_altitude||20:20);
+      });
+      const moonPeak=moonProfAbove.length?moonProfAbove.reduce((b,c)=>c.alt>b.alt?c:b):null;
+      solarItems.unshift({
+        vis:{id:'Moon',name:'Moon',type:'Natural Satellite',filters:[],sizeX:30,sizeY:30,mag:null,starRating:0,
+          peakAltitude:moonPeak?Math.round(moonPeak.alt):null,
+          peakTime:moonPeak?new Date(moonPeak.t):null,
+          hoursVisible:plannerData.moonHoursVisible||0,moonSeparation:0},
+        tgt:targets['Moon']||null,status:(targets['Moon']||{}).status||'untracked',isPlanet:true
+      });
+      solarItems=solarItems.filter(item=>item.vis.peakAltitude!==null);
+    }
+
+    const allItems=[...dsoItems,...solarItems];
+    // Sort by current sort key/direction
+    allItems.sort((a,b)=>{
+      const va=getSortValue(a.vis,a.tgt,plannerSortKey);
+      const vb=getSortValue(b.vis,b.tgt,plannerSortKey);
+      if(typeof va==='string'&&typeof vb==='string')return plannerSortDir*va.localeCompare(vb);
+      return plannerSortDir*((va||0)-(vb||0));
+    });
+
+    // Top bar: FOV + object count (item 10)
+    const topBar=document.getElementById('planner-top-bar');
+    topBar.style.display='';
+    topBar.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px">
+      <span style="color:var(--text2)"><strong style="color:var(--text)">${allItems.length}</strong> objects visible</span>
+      ${fovCalc?`<span style="color:var(--teal)">📐 FOV: ${fovCalc.w}' × ${fovCalc.h}'</span>`:''}
+      ${eq?`<span style="color:var(--text3)">${eq.name}${eq.focal_length?` · ${eq.focal_length}mm`:''}${eq.pixel_size&&eq.focal_length?` · ${calcArcsecPerPixel(eq.pixel_size,eq.focal_length)}"/px`:''}</span>`:''}
+    </div>`;
+
+    // Filter columns to only those that should render
+    const cols = plannerCols
+      .map(k => PLANNER_COL_DEFS[k])
+      .filter(c => c) // skip unknown keys
+      .filter(c => c.key !== 'fov' || fovCalc); // hide fov column if no equipment selected
+
+    // Header with sort arrows
+    let html = `<div class="table-wrap"><table><thead><tr>`;
+    cols.forEach(c => {
+      const sortable = !!c.sortKey;
+      const isSorted = sortable && c.sortKey === plannerSortKey;
+      const arrow = !sortable ? '' : (isSorted ? (plannerSortDir>0?'↑':'↓') : '↕');
+      html += `<th ${sortable?`class="sortable${isSorted?' sorted':''}" onclick="plannerSetSort('${c.sortKey}')" style="cursor:pointer"`:''}>${c.label} <span class="sort-arrow" style="color:${isSorted?'var(--accent)':'var(--text3)'};font-size:10px">${arrow}</span></th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    allItems.forEach(item => {
+      const ctx = {...item, fovCalc};
+      const escId = item.vis.id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      html += `<tr style="cursor:pointer" onclick="openObjModal('${escId}')">`;
+      cols.forEach(c => {
+        html += `<td>${c.render(ctx)}</td>`;
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+    document.getElementById('planner-content').innerHTML = html;
+  }catch(err){
+    console.error('renderPlannerTable error:',err);
+    document.getElementById('planner-content').innerHTML=
+      `<div class="empty"><div class="icon">⚠️</div>
+       <p style="color:var(--red)">Render error: ${err.message}</p>
+       <p style="font-size:12px;color:var(--text3)">Check browser console for details.</p></div>`;
+  }
+}
+
+function plannerSetSort(key){
+  if(plannerSortKey===key) plannerSortDir *= -1;
+  else { plannerSortKey=key; plannerSortDir = (key==='name'||key==='type'||key==='const'||key==='status') ? 1 : -1; }
+  renderPlannerTable();
+  savePlannerPrefs();
+}
+
+async function loadPlannerPrefs(){
+  try{
+    const r=await fetch('api/prefs.php?key=planner');
+    const p=await r.json();
+    if(p && typeof p==='object'){
+      if(Array.isArray(p.cols))plannerCols=p.cols.filter(k=>PLANNER_COL_DEFS[k]);
+      if(p.sortKey&&PLANNER_COL_DEFS[p.sortKey]&&PLANNER_COL_DEFS[p.sortKey].sortKey)plannerSortKey=p.sortKey;
+      if(p.sortDir===1||p.sortDir===-1)plannerSortDir=p.sortDir;
+    }
+  }catch(e){}
+}
+
+async function savePlannerPrefs(){
+  try{
+    await fetch('api/prefs.php?key=planner',{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cols:plannerCols, sortKey:plannerSortKey, sortDir:plannerSortDir})});
+  }catch(e){}
+}
+
+// ─── COLUMN PICKER ────────────────────────────────────────────────────────────
+function openColumnPicker(){
+  const list=document.getElementById('colpick-list');
+  // Build: current cols in order + unused cols at the end
+  const current=plannerCols.filter(k=>PLANNER_COL_DEFS[k]);
+  const unused=Object.keys(PLANNER_COL_DEFS).filter(k=>!current.includes(k));
+  const ordered=[...current,...unused];
+  list.innerHTML=ordered.map(k=>{
+    const def=PLANNER_COL_DEFS[k];
+    const checked=current.includes(k);
+    return `<div class="col-picker-row" draggable="true" data-key="${k}">
+      <span class="col-picker-handle">⋮⋮</span>
+      <input type="checkbox" ${checked?'checked':''}>
+      <span class="col-picker-label">${def.label}</span>
+    </div>`;
+  }).join('');
+  // Drag handlers
+  list.querySelectorAll('.col-picker-row').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',row.dataset.key);
+    });
+    row.addEventListener('dragend',()=>row.classList.remove('dragging'));
+    row.addEventListener('dragover',e=>{e.preventDefault();row.classList.add('drag-over')});
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const srcKey=e.dataTransfer.getData('text/plain');
+      if(srcKey===row.dataset.key)return;
+      const srcEl=list.querySelector(`[data-key="${srcKey}"]`);
+      if(!srcEl)return;
+      // Insert src before target
+      list.insertBefore(srcEl,row);
+    });
+  });
+  document.getElementById('colpick-overlay').classList.add('open');
+}
+
+function closeColumnPicker(e){
+  if(e&&e.target!==document.getElementById('colpick-overlay'))return;
+  document.getElementById('colpick-overlay').classList.remove('open');
+}
+
+async function saveColumnPicker(){
+  const rows=document.querySelectorAll('#colpick-list .col-picker-row');
+  const newCols=[];
+  rows.forEach(r=>{
+    const cb=r.querySelector('input[type="checkbox"]');
+    if(cb.checked)newCols.push(r.dataset.key);
+  });
+  if(newCols.length===0){alert('Select at least one column.');return}
+  plannerCols=newCols;
+  await savePlannerPrefs();
+  renderPlannerTable();
+  closeColumnPicker();
+}
+
+function resetColumnsToDefault(){
+  plannerCols=PLANNER_COLS_DEFAULT.slice();
+  openColumnPicker(); // rebuild
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CSV IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════════════
+
+// Holds the last-previewed import plan between preview and commit steps
+let csvImportRows = [];
+
+async function exportUserCatalog(){
+  const status=document.getElementById('export-status');
+  status.textContent='Preparing download...';
+  status.style.color='var(--text3)';
+  try{
+    // Fetch the CSV body so we can tell the user how many rows they got
+    const r=await fetch('api/user-catalog-csv.php?action=export');
+    if(!r.ok){
+      const err=await r.json().catch(()=>({error:'HTTP '+r.status}));
+      throw new Error(err.error||'Export failed');
+    }
+    const blob=await r.blob();
+    // Count rows (minus header) for the status message
+    const text=await blob.text();
+    const lines=text.split('\n').filter(l=>l.trim());
+    const rowCount=Math.max(0,lines.length-1);
+    // Trigger browser download
+    const url=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`astrotracker-catalog-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+    status.textContent=`Exported ${rowCount} object${rowCount===1?'':'s'}.`;
+    status.style.color='var(--green)';
+  }catch(e){
+    status.textContent='Export failed: '+e.message;
+    status.style.color='var(--red)';
+  }
+}
+
+async function previewCSVImport(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const status=document.getElementById('import-status');
+  status.textContent='Analyzing...';status.style.color='var(--text3)';
+  try{
+    const form=new FormData();
+    form.append('csvfile',file);
+    const r=await fetch('api/user-catalog-csv.php?action=preview',{method:'POST',body:form});
+    if(!r.ok){
+      const err=await r.json().catch(()=>({error:'HTTP '+r.status}));
+      throw new Error(err.error||'Preview failed');
+    }
+    const data=await r.json();
+    status.textContent='';
+    // Reset the file input so the user can re-select the same file if they cancel
+    event.target.value='';
+    openCsvImportModal(data);
+  }catch(e){
+    status.textContent='Import preview failed: '+e.message;
+    status.style.color='var(--red)';
+    event.target.value='';
+  }
+}
+
+function openCsvImportModal(data){
+  csvImportRows=data.rows||[];
+  const s=data.summary||{};
+  const summary=document.getElementById('csv-import-summary');
+  summary.innerHTML=`
+    <span style="color:var(--green)">${s.new||0} new</span> · 
+    <span style="color:var(--amber)">${s.possible_duplicate||0} possible duplicates</span> · 
+    <span style="color:var(--red)">${s.duplicate||0} exact duplicates</span> · 
+    <span style="color:var(--text3)">${s.invalid||0} invalid</span> · 
+    Total: ${s.total||0}`;
+  renderCsvImportTable();
+  document.getElementById('csv-import-overlay').classList.add('open');
+}
+
+function closeCsvImport(e){
+  if(e&&e.target!==document.getElementById('csv-import-overlay'))return;
+  document.getElementById('csv-import-overlay').classList.remove('open');
+  csvImportRows=[];
+}
+
+function renderCsvImportTable(){
+  const tbody=document.getElementById('csv-import-tbody');
+  tbody.innerHTML='';
+  csvImportRows.forEach((row,idx)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=rowHTML(row,idx);
+    tbody.appendChild(tr);
+  });
+}
+
+function rowHTML(row,idx){
+  const d=row.data||{};
+  const a=row.analysis||{};
+  const issues=row.issues||[];
+  const status=a.status||'new';
+  // Status badge
+  const badges={
+    new: '<span style="color:var(--green);font-weight:600">● NEW</span>',
+    possible_duplicate: '<span style="color:var(--amber);font-weight:600">● POSSIBLE DUP</span>',
+    duplicate: '<span style="color:var(--red);font-weight:600">● DUPLICATE</span>',
+    invalid: '<span style="color:var(--text3);font-weight:600">● INVALID</span>',
+  };
+  const matchInfo=a.matches&&a.matches.length
+    ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">Matches: ${a.matches.map(m=>escapeHTML(m.id)+' ('+escapeHTML(m.reason)+')').join('; ')}</div>`
+    : '';
+  const issueInfo=issues.length
+    ? `<div style="font-size:11px;color:var(--red);margin-top:3px">${issues.map(escapeHTML).join('; ')}</div>`
+    : '';
+  // Coords formatting
+  const coords=(d.ra!=null&&d.dec!=null)
+    ? `${Number(d.ra).toFixed(3)}h, ${Number(d.dec).toFixed(2)}°`
+    : '<span style="color:var(--red)">missing</span>';
+
+  return `
+    <td>${row.rowNum}</td>
+    <td>${badges[status]||status}${matchInfo}${issueInfo}</td>
+    <td><strong>${escapeHTML(d.id||'')}</strong><br><span style="color:var(--text2)">${escapeHTML(d.name||'')}</span></td>
+    <td>${escapeHTML(d.type||'')}</td>
+    <td>${coords}</td>
+    <td>${actionSelectorHTML(row,idx)}</td>
+  `;
+}
+
+function actionSelectorHTML(row,idx){
+  const status=row.analysis?.status||'new';
+  const match=row.analysis?.matches?.[0]||null;
+  const targetId=match?match.id:'';
+  const matchIsBuiltin=match&&match.source==='builtin';
+
+  if(status==='invalid'){
+    return '<em style="color:var(--text3)">Cannot import — will be skipped</em>';
+  }
+  if(status==='new'){
+    return `
+      <select data-idx="${idx}" class="csv-action-select" onchange="onActionChange(${idx})">
+        <option value="import" selected>Import as new</option>
+        <option value="skip">Skip</option>
+      </select>`;
+  }
+  // Duplicate or possible_duplicate — more options
+  // If match is built-in, merge/replace aren't possible
+  const mergeOption  = matchIsBuiltin ? '' : `<option value="merge">Merge into existing (${escapeHTML(targetId)})</option>`;
+  const replaceOption= matchIsBuiltin ? '' : `<option value="replace">Replace existing (${escapeHTML(targetId)})</option>`;
+  const defaultAction= status==='duplicate' ? 'skip' : 'skip';  // safe default
+  return `
+    <select data-idx="${idx}" class="csv-action-select" onchange="onActionChange(${idx})" data-target="${escapeHTML(targetId)}">
+      <option value="skip"${defaultAction==='skip'?' selected':''}>Skip this row</option>
+      ${mergeOption}
+      ${replaceOption}
+      <option value="keep_both">Keep both (rename imported)</option>
+    </select>
+    <div class="csv-alt-id-wrap" data-idx="${idx}" style="display:none;margin-top:5px">
+      <input type="text" placeholder="New ID for imported object" class="csv-alt-id-input" style="width:100%;font-size:12px;padding:4px 6px">
+    </div>`;
+}
+
+function onActionChange(idx){
+  const sel=document.querySelector(`select.csv-action-select[data-idx="${idx}"]`);
+  const wrap=document.querySelector(`.csv-alt-id-wrap[data-idx="${idx}"]`);
+  if(!sel||!wrap)return;
+  wrap.style.display = sel.value==='keep_both' ? 'block' : 'none';
+}
+
+async function confirmCsvImport(){
+  const btn=document.getElementById('csv-import-confirm-btn');
+  btn.disabled=true;btn.textContent='Importing...';
+  try{
+    // Build the commit plan by reading current selections
+    const plan=csvImportRows.map((row,idx)=>{
+      const status=row.analysis?.status||'new';
+      if(status==='invalid'){
+        return {rowNum:row.rowNum,data:row.data,action:'skip'};
+      }
+      const sel=document.querySelector(`select.csv-action-select[data-idx="${idx}"]`);
+      const action=sel?sel.value:'skip';
+      const item={rowNum:row.rowNum,data:row.data,action};
+      if(action==='merge'||action==='replace'){
+        item.targetId=sel.dataset.target||row.analysis?.matches?.[0]?.id||row.data.id;
+      }
+      if(action==='keep_both'){
+        const inp=document.querySelector(`.csv-alt-id-wrap[data-idx="${idx}"] .csv-alt-id-input`);
+        item.altId=inp?inp.value.trim():'';
+      }
+      return item;
+    });
+    // Validate keep_both entries have altId
+    for(const item of plan){
+      if(item.action==='keep_both'&&!item.altId){
+        alert(`Row ${item.rowNum}: you chose "Keep both" but did not provide a new ID.`);
+        btn.disabled=false;btn.textContent='Confirm Import';
+        return;
+      }
+    }
+    const r=await fetch('api/user-catalog-csv.php?action=commit',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({plan})});
+    if(!r.ok){
+      const err=await r.json().catch(()=>({error:'HTTP '+r.status}));
+      throw new Error(err.error||'Import failed');
+    }
+    const result=await r.json();
+    // Refresh catalog and close modal
+    await loadCatalog();
+    closeCsvImport();
+    const msg=`Imported ${result.imported}, merged ${result.merged}, replaced ${result.replaced}, skipped ${result.skipped}` +
+              (result.errors&&result.errors.length ? `\n\n${result.errors.length} error(s):\n`+result.errors.slice(0,5).join('\n') : '');
+    const status=document.getElementById('import-status');
+    status.textContent=msg;
+    status.style.color=(result.errors&&result.errors.length)?'var(--amber)':'var(--green)';
+    status.style.whiteSpace='pre-wrap';
+    if(result.errors&&result.errors.length){console.warn('Import errors:',result.errors)}
+  }catch(e){
+    alert('Import failed: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='Confirm Import';
+  }
+}
+
+function escapeHTML(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ♡ button: immediately add to wishlist without opening modal
+async function quickWishlist(id){
+  const existing=targets[id];
+  // If already tracked, just open the modal instead
+  if(existing&&existing.status){openObjModal(id);return}
+  await fetch(`api/targets.php?id=${encodeURIComponent(id)}`,{method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status:'wishlist',notes:'',rating:0})});
+  await loadTargets();
+  renderCatalog();
+  renderPipeline();
+  if(plannerData)renderPlannerTable();
+  // Brief visual feedback
+  const btns=document.querySelectorAll(`[onclick*="quickWishlist('${id.replace(/'/g,"\\'")}')"]`);
+  btns.forEach(b=>{const orig=b.textContent;b.textContent='✓';b.style.color='var(--green)';
+    setTimeout(()=>{b.textContent=orig;b.style.color='';},1200)});
+}
+
+['planner-type-filter','planner-filter-filter','planner-status-filter','planner-equip'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{if(plannerData)renderPlannerTable()});
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// ADD / EDIT CUSTOM OBJECT
+// ═══════════════════════════════════════════════════════════════════
+let editingUserObjId = null;
+
+function openAddObjectModal(editObj=null){
+  editingUserObjId = editObj ? editObj.id : null;
+  document.getElementById('addobj-modal-title').textContent = editObj ? 'Edit Custom Object' : 'Add Custom Object';
+  document.getElementById('addobj-save-btn').textContent = editObj ? 'Save Changes' : 'Add to Catalog';
+  document.getElementById('ao-id').value = editObj ? editObj.id : '';
+  document.getElementById('ao-id').disabled = !!editObj; // can't change ID on edit
+  document.getElementById('ao-name').value = editObj ? editObj.name : '';
+  document.getElementById('ao-type').value = editObj ? editObj.type : 'Galaxy';
+  document.getElementById('ao-const').value = editObj ? editObj.constellation||'' : '';
+  document.getElementById('ao-ra').value = editObj ? editObj.ra : '';
+  document.getElementById('ao-dec').value = editObj ? editObj.dec : '';
+  document.getElementById('ao-mag').value = editObj&&editObj.mag!=null ? editObj.mag : '';
+  document.getElementById('ao-sx').value = editObj&&editObj.sizeX ? editObj.sizeX : '';
+  document.getElementById('ao-sy').value = editObj&&editObj.sizeY ? editObj.sizeY : '';
+  document.getElementById('ao-filters').value = editObj ? (editObj.filters||[]).join(', ') : '';
+  document.getElementById('ao-other').value = editObj ? editObj.otherNames||'' : '';
+  document.getElementById('ao-desc').value = editObj ? editObj.description||'' : '';
+  // Add delete button when editing
+  const footer = document.getElementById('addobj-footer');
+  const existing = footer.querySelector('.btn-danger');
+  if(existing) existing.remove();
+  if(editObj){
+    const del = document.createElement('button');
+    del.className = 'btn btn-danger';
+    del.textContent = 'Delete Object';
+    del.onclick = () => deleteCustomObject(editObj.id);
+    footer.insertBefore(del, footer.firstChild);
+  }
+  document.getElementById('addobj-modal-overlay').classList.add('open');
+}
+
+async function saveCustomObject(){
+  const id = document.getElementById('ao-id').value.trim();
+  const name = document.getElementById('ao-name').value.trim();
+  const ra = parseFloat(document.getElementById('ao-ra').value);
+  const dec = parseFloat(document.getElementById('ao-dec').value);
+  if(!id||!name||isNaN(ra)||isNaN(dec)){
+    alert('ID, Name, RA and Dec are all required.');return;
+  }
+  const filtersRaw = document.getElementById('ao-filters').value;
+  const body = {
+    id, name,
+    type: document.getElementById('ao-type').value,
+    constellation: document.getElementById('ao-const').value.trim(),
+    ra, dec,
+    mag: document.getElementById('ao-mag').value!=='' ? parseFloat(document.getElementById('ao-mag').value) : null,
+    sizeX: document.getElementById('ao-sx').value!=='' ? parseFloat(document.getElementById('ao-sx').value) : null,
+    sizeY: document.getElementById('ao-sy').value!=='' ? parseFloat(document.getElementById('ao-sy').value) : null,
+    filters: filtersRaw ? filtersRaw.split(',').map(f=>f.trim()).filter(Boolean) : [],
+    otherNames: document.getElementById('ao-other').value.trim(),
+    description: document.getElementById('ao-desc').value.trim(),
+    starRating: 0
+  };
+  let r;
+  if(editingUserObjId){
+    r = await fetch(`api/user-catalog.php?id=${encodeURIComponent(editingUserObjId)}`,
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  } else {
+    r = await fetch('api/user-catalog.php',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  const data = await r.json();
+  if(!r.ok){ alert('Error: '+(data.error||'Save failed')); return; }
+  await loadCatalog();
+  renderCatalog();
+  renderCatalogTypeChips();
+  closeAddObjectModal();
+  // Open the new object's modal to start tracking
+  if(!editingUserObjId) openObjModal(id);
+}
+
+async function deleteCustomObject(id){
+  if(!confirm(`Delete "${id}" from your catalog? This also removes any tracking data for this object.`)) return;
+  await fetch(`api/user-catalog.php?id=${encodeURIComponent(id)}`,{method:'DELETE'});
+  await loadCatalog();
+  renderCatalog();
+  renderCatalogTypeChips();
+  closeAddObjectModal();
+}
+
+function closeAddObjectModal(e){
+  if(e&&e.target!==document.getElementById('addobj-modal-overlay'))return;
+  document.getElementById('addobj-modal-overlay').classList.remove('open');
+  document.getElementById('ao-id').disabled=false;
+}
+function renderCatalogTypeChips(){
+  // Collect types from the DSO catalog; add a unified "Planet/Moon" chip
+  // if the planet catalog has content.
+  const types=[...new Set(catalog.map(c=>c.type))].sort();
+  if(planetCatalog&&planetCatalog.length>0)types.push('Planet/Moon');
+  const wrap=document.getElementById('cat-type-chips');
+  wrap.innerHTML='';
+  types.forEach(t=>{
+    const ch=document.createElement('div');
+    const color=t==='Planet/Moon'?'var(--gold)':typeColor(t);
+    ch.className='chip'+(catTypeFilter===t?' active':'');
+    if(catTypeFilter===t)ch.style.cssText=`background:${color};border-color:${color}`;
+    ch.innerHTML=`<span class="chip-dot" style="background:${color}"></span>${t}`;
+    ch.addEventListener('click',()=>{catTypeFilter=catTypeFilter===t?'':t;renderCatalogTypeChips();renderCatalog()});
+    wrap.appendChild(ch);
+  });
+}
+
+function renderCatalog(){
+  // Merge built-in catalog + user catalog + planets/moon (item 8)
+  const allCatalog = [...catalog, ...planetCatalog];
+  let items=allCatalog.filter(obj=>{
+    if(catTypeFilter){
+      if(catTypeFilter==='Planet/Moon'){
+        if(obj.type!=='Planet'&&obj.type!=='Natural Satellite')return false;
+      } else if(obj.type!==catTypeFilter)return false;
+    }
+    if(catFilterFilter&&!(obj.filters||[]).includes(catFilterFilter))return false;
+    if(catSearchQ){const q=catSearchQ.toLowerCase();
+      return (obj.name||'').toLowerCase().includes(q)||(obj.id||'').toLowerCase().includes(q)||
+        (obj.constellation||'').toLowerCase().includes(q)||(obj.otherNames||'').toLowerCase().includes(q)}
+    return true;
+  });
+  items.sort((a,b)=>{
+    if(catSortKey==='myrating'){const ra=(targets[a.id]||{}).rating||0,rb=(targets[b.id]||{}).rating||0;return catSortDir*(rb-ra)}
+    // Item 6: sort by size uses area = sizeX * sizeY
+    if(catSortKey==='size'){
+      const sa=(a.sizeX||0)*(a.sizeY||a.sizeX||0);
+      const sb=(b.sizeX||0)*(b.sizeY||b.sizeX||0);
+      return catSortDir*(sb-sa);
+    }
+    let av=a[catSortKey],bv=b[catSortKey];
+    if(typeof av==='string')return catSortDir*av.localeCompare(bv||'');
+    return catSortDir*((av||0)-(bv||0));
+  });
+  document.getElementById('cat-count').textContent=`(${items.length})`;
+  const tbody=document.getElementById('cat-tbody');
+  tbody.innerHTML=items.map(obj=>{
+    const tgt=targets[obj.id];
+    const myRating=tgt?tgt.rating:0;
+    const escId=obj.id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const customBadge=obj._userAdded?'<span class="user-added-badge" style="margin-left:4px">Custom</span>':'';
+    const actionBtn=obj._userAdded
+      ?`<button class="btn-track" onclick="event.stopPropagation();closeObjModal();openAddObjectModal(catalog.find(c=>c.id==='${escId}'))" title="Edit custom object">✎ Edit</button>`
+      :`<button class="btn-track" onclick="event.stopPropagation();quickWishlist('${escId}')" title="Add to wishlist">♡</button>`;
+    return`<tr style="cursor:pointer" onclick="openObjModal('${escId}')">
+      <td class="td-id">${obj.id}${customBadge}</td>
+      <td class="td-name">${obj.name}</td>
+      <td><div class="td-type"><div class="type-dot ${typeClass(obj.type)}"></div><span style="font-size:12px;color:${typeColor(obj.type)}">${obj.type}</span></div></td>
+      <td style="color:var(--text2)">${obj.constellation||'—'}</td>
+      <td style="font-size:11px;color:var(--text2);font-family:monospace">${fmtRA(obj.ra)}</td>
+      <td style="font-size:11px;color:var(--text2);font-family:monospace">${fmtDec(obj.dec)}</td>
+      <td style="color:var(--text2)">${fmtMag(obj.mag)}</td>
+      <td style="color:var(--text2);font-size:12px;white-space:nowrap">${fmtSize(obj.sizeX,obj.sizeY)}</td>
+      <td>${starHTML(myRating)}</td>
+      <td><div class="td-filters">${filterTags(obj.filters)}</div></td>
+      <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${obj.otherNames||'—'}</td>
+      <td>${tgt?`<span class="badge badge-${tgt.status}">${tgt.status}</span>`:''}</td>
+      <td>${actionBtn}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#page-catalog th[data-sort]').forEach(th=>{
+    th.classList.toggle('sorted',th.dataset.sort===catSortKey);
+    const ar=th.querySelector('.sort-arrow');
+    if(ar)ar.textContent=th.dataset.sort===catSortKey?(catSortDir>0?'↑':'↓'):'↕';
+  });
+}
+
+document.getElementById('cat-search').addEventListener('input',e=>{catSearchQ=e.target.value;renderCatalog()});
+document.getElementById('cat-filter-filter').addEventListener('change',e=>{catFilterFilter=e.target.value;renderCatalog()});
+document.querySelectorAll('#page-catalog th[data-sort]').forEach(th=>{
+  th.addEventListener('click',()=>{
+    if(catSortKey===th.dataset.sort)catSortDir*=-1;else{catSortKey=th.dataset.sort;catSortDir=1}
+    renderCatalog();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// PIPELINE
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById('pipeline-show-complete').addEventListener('change',renderPipeline);
+function renderPipeline(){
+  const showComplete=document.getElementById('pipeline-show-complete').checked;
+  const statuses=showComplete?['wishlist','planned','captured','processing','complete']:['wishlist','planned','captured','processing'];
+  let html='';
+  statuses.forEach(s=>{
+    const items=Object.values(targets).filter(t=>t.status===s);
+    html+=`<div class="pipeline-col"><div class="pipeline-header h-${s}">${s.toUpperCase()} <span style="color:var(--text3)">(${items.length})</span></div><div class="pipeline-items">`;
+    items.forEach(t=>{
+      const obj=catalog.find(c=>c.id===t.id);
+      const escId=t.id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      html+=`<div class="pipeline-item" onclick="openObjModal('${escId}')">
+        <div class="pipeline-item-name">${obj?obj.name:t.id}</div>
+        <div class="pipeline-item-sub">${obj?obj.type:''}</div></div>`;
+    });
+    html+='</div></div>';
+  });
+  document.getElementById('pipeline-board').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SESSIONS
+// ═══════════════════════════════════════════════════════════════════
+async function loadSessions(){const r=await fetch('api/sessions.php');sessions=await r.json();renderSessions()}
+function renderSessions(){
+  const q=(document.getElementById('sess-search').value||'').toLowerCase();
+  const items=q?sessions.filter(s=>{const obj=catalog.find(c=>c.id===s.target_id);
+    return(obj&&obj.name.toLowerCase().includes(q))||s.target_id.toLowerCase().includes(q)||(s.telescope||'').toLowerCase().includes(q)}):sessions;
+  const tbody=document.getElementById('sess-tbody');
+  if(!items.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3)">No sessions yet</td></tr>';return}
+  tbody.innerHTML=items.map(s=>{
+    const obj=catalog.find(c=>c.id===s.target_id);
+    return`<tr>
+      <td style="white-space:nowrap">${s.session_date}</td>
+      <td><div class="td-name">${obj?obj.name:s.target_id}</div><div class="td-id">${s.target_id}</div></td>
+      <td style="color:var(--text2)">${s.location||'—'}</td>
+      <td style="color:var(--text2)">${s.telescope||'—'}</td>
+      <td style="color:var(--text2)">${s.camera||'—'}</td>
+      <td style="color:var(--text2)">${s.filters||'—'}</td>
+      <td style="color:var(--text2)">${s.integration_time?s.integration_time+'m':'—'}</td>
+      <td style="color:var(--text2)">${s.frame_count||'—'}</td>
+      <td style="color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="openSessionModal(null,${s.id})" title="Edit">✎</button>
+        <button class="btn-icon" onclick="deleteSession(${s.id})" style="color:var(--red)" title="Delete">✕</button>
+      </div></td></tr>`;
+  }).join('');
+}
+document.getElementById('sess-search').addEventListener('input',renderSessions);
+async function deleteSession(id){if(!confirm('Delete this session?'))return;await fetch(`api/sessions.php?id=${id}`,{method:'DELETE'});await loadSessions()}
+
+// ═══════════════════════════════════════════════════════════════════
+// OBJECT MODAL
+// ═══════════════════════════════════════════════════════════════════
+async function openObjModal(id){
+  currentObjId=id;
+  const isMoon=id==='Moon';
+  const isPlanet=!isMoon&&PLANET_IDS.includes(id);
+  const isSolar=isMoon||isPlanet;
+  let obj=null;
+  if(isSolar){
+    obj={id,name:id,type:isMoon?'Natural Satellite':'Planet',constellation:'',
+      ra:null,dec:null,sizeX:isMoon?30:0,sizeY:isMoon?30:0,starRating:0,filters:[],description:'',otherNames:''};
+  }else{
+    obj=catalog.find(c=>c.id===id);
+    if(!obj)return;
+  }
+  // Show name with ID chip (item 3). For planets/moon there's no meaningful ID so skip the chip.
+  const idChip = (!isSolar && obj.id)
+    ? `<span style="font-family:monospace;font-size:13px;color:var(--accent);background:var(--bg4);padding:2px 8px;border-radius:6px;margin-left:10px;vertical-align:middle">${obj.id}</span>`
+    : '';
+  document.getElementById('modal-name').innerHTML=`${obj.name}${idChip}`;
+  document.getElementById('modal-sub').innerHTML=`
+    ${!isSolar?`<span class="type-dot ${typeClass(obj.type)}" style="margin-right:5px"></span>`:''}
+    ${isSolar?`<span class="planet-badge">${obj.type}</span> `:obj.type+' · '}
+    ${obj.constellation?' '+obj.constellation+' ·':''}
+    ${obj._userAdded?'<span class="user-added-badge" style="margin-left:6px">Custom Object</span>':''}
+    ${obj._overridden&&!obj._userAdded?'<span class="tag" style="margin-left:6px;color:var(--amber)">overridden</span>':''}`;
+  // AstroBin search uses ID for DSOs (less ambiguous), name for planets/moon (item 4)
+  const astrobinQuery = (!isSolar && obj.id) ? obj.id : obj.name;
+  document.getElementById('modal-astrobin').innerHTML=`<a href="https://www.astrobin.com/search/?q=${encodeURIComponent(astrobinQuery)}" target="_blank" rel="noopener">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> AstroBin</a>`;
+
+  if(!isSolar){
+    document.getElementById('modal-obj-info').innerHTML=`
+      <span style="color:var(--text3)">Magnitude:</span> ${fmtMag(obj.mag)}<br>
+      <span style="color:var(--text3)">Size:</span> ${fmtSize(obj.sizeX,obj.sizeY)}<br>
+      <span style="color:var(--text3)">RA:</span> ${fmtRA(obj.ra)}<br>
+      <span style="color:var(--text3)">Dec:</span> ${fmtDec(obj.dec)}<br>
+      <span style="color:var(--text3)">Constellation:</span> ${obj.constellation||'—'}
+      ${obj.otherNames?`<br><span style="color:var(--text3)">Other Names:</span> ${obj.otherNames}`:''}`;
+    document.getElementById('modal-guide-stars').innerHTML=starHTML(obj.starRating||0);
+    document.getElementById('modal-filters').innerHTML=filterTags(obj.filters);
+    document.getElementById('modal-description').textContent=obj.description||'';
+
+    if(obj._userAdded){
+      // User-added: show Edit button instead of catalog override form
+      document.getElementById('modal-edit-btn').style.display='';
+      document.getElementById('modal-edit-btn').textContent='Edit Object';
+      document.getElementById('modal-edit-btn').onclick=()=>{closeObjModal();openAddObjectModal(obj)};
+      document.getElementById('catalog-edit-form').style.display='none';
+    } else {
+      document.getElementById('modal-edit-btn').style.display='';
+      document.getElementById('modal-edit-btn').textContent='Edit Data';
+      document.getElementById('modal-edit-btn').onclick=toggleCatalogEdit;
+      document.getElementById('catalog-edit-form').style.display='none';
+      document.getElementById('modal-edit-btn').textContent='Edit Data';
+      document.getElementById('edit-mag').value=obj.mag!==99?obj.mag||'':'';
+      document.getElementById('edit-sx').value=obj.sizeX||'';
+      document.getElementById('edit-sy').value=obj.sizeY||'';
+      document.getElementById('edit-ra').value=obj.ra||'';
+      document.getElementById('edit-dec').value=obj.dec||'';
+      document.getElementById('edit-filters').value=(obj.filters||[]).join(', ');
+      document.getElementById('modal-reset-btn').style.display=obj._overridden?'inline-flex':'none';
+    }
+  }else{
+    document.getElementById('modal-obj-info').innerHTML=isMoon
+      ?`Earth's natural satellite. Position changes nightly.`
+      :`Planet — position changes nightly.`;
+    document.getElementById('modal-guide-stars').innerHTML='—';
+    document.getElementById('modal-filters').innerHTML='—';
+    document.getElementById('modal-description').textContent='';
+    document.getElementById('modal-edit-btn').style.display='none';
+    document.getElementById('catalog-edit-form').style.display='none';
+  }
+
+  const tgt=targets[id];
+  document.getElementById('modal-status').value=tgt?tgt.status:'';
+  document.getElementById('modal-notes').value=tgt?(tgt.notes||''):'';
+  userStarRating=tgt?(tgt.rating||0):0;
+  updateUserStars();
+  document.getElementById('modal-vis-info').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  document.getElementById('modal-alt-chart').getContext('2d').clearRect(0,0,999,999);
+  document.getElementById('chart-legend').innerHTML='';
+  document.getElementById('obj-modal-overlay').classList.add('open');
+
+  const plannerLocId=document.getElementById('planner-location').value;
+  const loc=plannerLocId?locations.find(l=>l.id==plannerLocId):null||locations.find(l=>l.is_default)||locations[0];
+  if(loc){
+    const date=document.getElementById('planner-date').value||todayStr();
+    const minAlt=loc.min_altitude||20;
+    const vr=await fetch(`api/visibility.php?id=${encodeURIComponent(id)}&lat=${loc.lat}&lon=${loc.lon}&date=${date}&min_altitude=${minAlt}`);
+    const vd=await vr.json();
+    currentObjSolar=vd.solar;
+    currentObjProfile=vd.altitudeProfile||[];
+    currentObjMoonSepProfile=vd.moonSepProfile||[];
+    currentObjMinAlt=minAlt;
+    chartShowUTC=false;
+    // Small delay so the modal animation completes before we measure canvas width
+    setTimeout(()=>renderObjVisibility(vd,obj,loc,date), 50);
+  }else{
+    document.getElementById('modal-vis-info').innerHTML='<p style="color:var(--text3);font-size:13px">Add a location in Settings to see visibility.</p>';
+  }
+}
+
+function renderObjVisibility(vd,obj,loc,date){
+  const profile=vd.altitudeProfile||[];
+  const minAlt=currentObjMinAlt;
+  const solar=vd.solar||{};
+  const darkStartMs=solar.astroDusk?new Date(solar.astroDusk).getTime():0;
+  const darkEndMs=solar.astroDawn?new Date(solar.astroDawn).getTime():Infinity;
+  const isMoon=obj.id==='Moon';
+
+  const darkAbove=profile.filter(p=>{
+    const t=new Date(p.time).getTime();
+    return t>=darkStartMs&&t<=darkEndMs&&p.altitude>=minAlt;
+  });
+  const peakAlt=darkAbove.length?Math.max(...darkAbove.map(p=>p.altitude)):null;
+  const hoursVis=Math.round(darkAbove.length*(5/60)*10)/10;
+  const moonSep=vd.moonSeparation||0;
+  const altColor=peakAlt>=60?'var(--green)':peakAlt>=30?'var(--amber)':peakAlt?'var(--text2)':'var(--red)';
+  const moonColor=moonSep>=60?'var(--green)':moonSep>=30?'var(--amber)':'var(--red)';
+
+  document.getElementById('modal-vis-info').innerHTML=`
+    <div class="visib-stat"><div class="visib-stat-val" style="color:${altColor}">${peakAlt!==null?peakAlt+'°':'N/A'}</div><div class="visib-stat-lbl">Peak Altitude</div></div>
+    <div class="visib-stat"><div class="visib-stat-val">${hoursVis}h</div><div class="visib-stat-lbl">Hours Above ${minAlt}° (dark)</div></div>
+    <div class="visib-stat"><div class="visib-stat-val" style="color:${moonColor}">${isMoon?'—':moonSep?moonSep+'°':'—'}</div><div class="visib-stat-lbl">${isMoon?'Natural Satellite':'Moon Sep'}</div></div>`;
+
+  document.getElementById('chart-date-label').textContent=`${date||todayStr()} · ${loc?loc.name:''}`;
+  document.getElementById('tz-toggle').textContent=chartShowUTC?'UTC (click for local)':'Local time (click for UTC)';
+
+  // Legend
+  const moonSepProf=vd.moonSepProfile||[];
+  const showMoonSep=!isMoon&&moonSepProf.length>0;
+  document.getElementById('chart-legend').innerHTML=`
+    <div class="legend-item"><div class="legend-dot" style="background:#6080ff"></div><span>Altitude</span></div>
+    ${showMoonSep?'<div class="legend-item"><div class="legend-dot" style="background:#f5a623;opacity:.8"></div><span>Moon Separation (÷2 scale)</span></div>':''}`;
+
+  drawAltChart(profile,solar,minAlt,moonSepProf,isMoon);
+}
+
+function toggleChartTZ(){
+  chartShowUTC=!chartShowUTC;
+  document.getElementById('tz-toggle').textContent=chartShowUTC?'UTC (click for local)':'Local time (click for UTC)';
+  if(currentObjProfile&&currentObjSolar)
+    drawAltChart(currentObjProfile,currentObjSolar,currentObjMinAlt,currentObjMoonSepProfile||[],currentObjId==='Moon');
+}
+
+// ─── CHART ──────────────────────────────────────────────────────────────────
+function drawAltChart(profile, solar, minAlt, moonSepProf, isMoon){
+  const canvas=document.getElementById('modal-alt-chart');
+  const W=Math.max(canvas.parentElement.offsetWidth||0, 400);
+  const H=200;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  if(!profile||profile.length<2){
+    ctx.fillStyle='#5c6080';ctx.font='13px system-ui';ctx.textAlign='center';
+    ctx.fillText('No visibility data',W/2,H/2);return;
+  }
+
+  // Padding: leave bottom 30px for time labels drawn outside clip
+  const L=38,R=14,T=18,B=32;
+  const cW=W-L-R, cH=H-T-B;
+
+  // Time bounds
+  const sunsetMs=solar.sunset?new Date(solar.sunset).getTime():new Date(profile[0].time).getTime();
+  const sunriseMs=solar.sunrise?new Date(solar.sunrise).getTime():new Date(profile[profile.length-1].time).getTime();
+  const tSpan=Math.max(sunriseMs-sunsetMs,1);
+
+  const tx=ms=>L+(ms-sunsetMs)/tSpan*cW;
+  const ty=alt=>T+cH-(Math.max(0,Math.min(90,alt))/90)*cH;
+  const horizY=T+cH; // y of 0 degrees
+
+  // ── Background degree grid ────────────────────────────────────────────────
+  [0,30,60,90].forEach(deg=>{
+    const y=ty(deg);
+    ctx.strokeStyle='#1e2235';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();
+    ctx.fillStyle='#505878';ctx.font='10px system-ui';ctx.textAlign='right';
+    ctx.fillText(deg+'°',L-4,y+3);
+  });
+
+  // ── Hour tick lines and labels (drawn FIRST, no clipping) ─────────────────
+  const hourMs=3600000;
+  const firstHour=Math.ceil(sunsetMs/hourMs)*hourMs;
+  for(let t=firstHour;t<=sunriseMs+hourMs;t+=hourMs){
+    const x=tx(t);
+    if(x<L-1||x>W-R+1)continue;
+    ctx.strokeStyle='#252842';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,T);ctx.lineTo(x,horizY);ctx.stroke();
+    // Time label in bottom margin
+    const d=new Date(t);
+    const lbl=chartShowUTC?d.toISOString().slice(11,16)+'Z':d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    ctx.fillStyle='#606888';ctx.font='9px system-ui';ctx.textAlign='center';
+    ctx.fillText(lbl,x,H-8);
+  }
+
+  // ── Twilight shading ──────────────────────────────────────────────────────
+  [
+    ['civilDusk','sunset',0.20],['nauticalDusk','civilDusk',0.13],['astroDusk','nauticalDusk',0.07],
+    ['astroDawn','nauticalDawn',0.07],['nauticalDawn','civilDawn',0.13],['civilDawn','sunrise',0.20],
+  ].forEach(([k1,k2,op])=>{
+    if(!solar[k1]||!solar[k2])return;
+    const t1=new Date(solar[k1]).getTime(),t2=new Date(solar[k2]).getTime();
+    const x1=Math.max(L,tx(Math.min(t1,t2))),x2=Math.min(W-R,tx(Math.max(t1,t2)));
+    if(x2>x1){ctx.fillStyle=`rgba(30,60,120,${op})`;ctx.fillRect(x1,T,x2-x1,cH)}
+  });
+
+  // ── Horizon line (red dashed) ──────────────────────────────────────────────
+  ctx.strokeStyle='rgba(220,60,60,0.55)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(L,horizY);ctx.lineTo(W-R,horizY);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Min alt line (amber dashed) ───────────────────────────────────────────
+  if(minAlt>0){
+    const yMin=ty(minAlt);
+    ctx.strokeStyle='rgba(245,166,35,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(L,yMin);ctx.lineTo(W-R,yMin);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(245,166,35,0.8)';ctx.font='9px system-ui';ctx.textAlign='left';
+    ctx.fillText(minAlt+'° min',L+3,yMin-3);
+  }
+
+  // ── Clip to chart area for curves ─────────────────────────────────────────
+  ctx.save();
+  ctx.beginPath();ctx.rect(L,T,cW,cH+1);ctx.clip();
+
+  // Moon separation line (secondary axis: 0–180° mapped to chart height)
+  const showMoonSep=!isMoon&&moonSepProf&&moonSepProf.length>0;
+  if(showMoonSep){
+    // Draw 90° caution zone (moon within 90°)
+    const ySep90=T+cH-(90/180)*cH;
+    ctx.fillStyle='rgba(242,92,92,0.06)';
+    ctx.fillRect(L,ySep90,cW,cH-ySep90+T+cH-ySep90);
+    // 90° reference line
+    ctx.strokeStyle='rgba(242,92,92,0.25)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.moveTo(L,ySep90);ctx.lineTo(W-R,ySep90);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(242,92,92,0.5)';ctx.font='8px system-ui';ctx.textAlign='right';
+    ctx.fillText('90° moon',W-R-2,ySep90-3);
+
+    // Moon sep curve
+    ctx.lineWidth=1.5;ctx.strokeStyle='rgba(245,166,35,0.75)';ctx.setLineDash([3,2]);
+    ctx.beginPath();let inS=false;
+    for(const p of moonSepProf){
+      if(p.sep==null)continue;
+      const x=tx(p.t);
+      if(x<L||x>W-R)continue;
+      const y=T+cH-(p.sep/180)*cH;
+      if(!inS){ctx.moveTo(x,y);inS=true}else ctx.lineTo(x,y);
+    }
+    if(inS)ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Altitude gradient fill
+  const grad=ctx.createLinearGradient(0,T,0,horizY);
+  grad.addColorStop(0,'rgba(80,100,255,0.45)');grad.addColorStop(1,'rgba(80,100,255,0.04)');
+  ctx.beginPath();let started=false;
+  for(const p of profile){
+    const x=tx(new Date(p.time).getTime());
+    if(x<L||x>W-R)continue;
+    const y=ty(Math.max(0,p.altitude));
+    if(!started){ctx.moveTo(x,horizY);ctx.lineTo(x,y);started=true}else ctx.lineTo(x,y);
+  }
+  if(started){
+    ctx.lineTo(Math.min(W-R,tx(new Date(profile[profile.length-1].time).getTime())),horizY);
+    ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  }
+
+  // Altitude curve — break at horizon
+  ctx.lineWidth=2;ctx.strokeStyle='#6080ff';
+  let inSeg=false;ctx.beginPath();
+  for(const p of profile){
+    const x=tx(new Date(p.time).getTime());
+    if(x<L||x>W-R)continue;
+    if(p.altitude<0){if(inSeg){ctx.stroke();ctx.beginPath();inSeg=false}continue}
+    const y=ty(p.altitude);
+    if(!inSeg){ctx.moveTo(x,y);inSeg=true}else ctx.lineTo(x,y);
+  }
+  if(inSeg)ctx.stroke();
+
+  ctx.restore();
+
+  // ── Astro dusk/dawn vertical lines — drawn LAST so they're on top of fill ──
+  [{key:'astroDusk',align:'left',offset:3},{key:'astroDawn',align:'right',offset:-3}].forEach(({key,align,offset})=>{
+    if(!solar[key])return;
+    const x=tx(new Date(solar[key]).getTime());
+    if(x<L||x>W-R)return;
+    ctx.strokeStyle='rgba(120,160,255,0.85)';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+    ctx.beginPath();ctx.moveTo(x,T);ctx.lineTo(x,horizY);ctx.stroke();
+    ctx.setLineDash([]);
+    // White-outlined label so it's readable against the gradient fill
+    ctx.font='bold 9px system-ui';ctx.textAlign=align;
+    ctx.strokeStyle='rgba(0,0,0,0.6)';ctx.lineWidth=3;ctx.lineJoin='round';
+    ctx.strokeText(key==='astroDusk'?'Dusk':'Dawn',x+offset,T+12);
+    ctx.fillStyle='rgba(180,210,255,1)';ctx.lineWidth=1;
+    ctx.fillText(key==='astroDusk'?'Dusk':'Dawn',x+offset,T+12);
+  });
+}
+
+// ─── CATALOG EDIT ─────────────────────────────────────────────────────────────
+function toggleCatalogEdit(){
+  const f=document.getElementById('catalog-edit-form');
+  const b=document.getElementById('modal-edit-btn');
+  if(f.style.display==='none'){f.style.display='block';b.textContent='Cancel Edit'}
+  else{f.style.display='none';b.textContent='Edit Data'}
+}
+async function saveCatalogEdit(){
+  const filtersRaw=document.getElementById('edit-filters').value;
+  const filters=filtersRaw?filtersRaw.split(',').map(f=>f.trim()).filter(Boolean):null;
+  const body={
+    mag:document.getElementById('edit-mag').value!==''?parseFloat(document.getElementById('edit-mag').value):null,
+    sizeX:document.getElementById('edit-sx').value!==''?parseFloat(document.getElementById('edit-sx').value):null,
+    sizeY:document.getElementById('edit-sy').value!==''?parseFloat(document.getElementById('edit-sy').value):null,
+    ra:document.getElementById('edit-ra').value!==''?parseFloat(document.getElementById('edit-ra').value):null,
+    dec:document.getElementById('edit-dec').value!==''?parseFloat(document.getElementById('edit-dec').value):null,
+    filters
+  };
+  await fetch(`api/catalog.php?id=${encodeURIComponent(currentObjId)}&action=override`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  await loadCatalog();closeObjModal();renderCatalog();
+}
+async function resetCatalogEdit(){
+  if(!confirm('Reset to original catalog data?'))return;
+  await fetch(`api/catalog.php?id=${encodeURIComponent(currentObjId)}&action=override`,{method:'DELETE'});
+  await loadCatalog();closeObjModal();renderCatalog();
+}
+function setUserStar(v){userStarRating=userStarRating===v?0:v;updateUserStars()}
+function updateUserStars(){document.querySelectorAll('#modal-user-stars .star-btn').forEach((s,i)=>s.classList.toggle('active',i<userStarRating))}
+
+async function saveTargetModal(){
+  const status=document.getElementById('modal-status').value;
+  const notes=document.getElementById('modal-notes').value;
+  await fetch(`api/targets.php?id=${encodeURIComponent(currentObjId)}`,{method:'PUT',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({status,notes,rating:userStarRating})});
+  await loadTargets();renderCatalog();renderPipeline();
+  if(plannerData)renderPlannerTable();
+  closeObjModal();
+}
+function closeObjModal(e){
+  if(e&&e.target!==document.getElementById('obj-modal-overlay'))return;
+  document.getElementById('obj-modal-overlay').classList.remove('open');
+  currentObjId=null;currentObjSolar=null;currentObjProfile=null;currentObjMoonSepProfile=null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SESSION MODAL
+// ═══════════════════════════════════════════════════════════════════
+function openSessionModal(targetId=null,sessionId=null){
+  editingSessionId=sessionId;
+  document.getElementById('sess-modal-title').textContent=sessionId?'Edit Session':'Log Imaging Session';
+  document.getElementById('sess-date').value=todayStr();
+  ['sess-target','sess-location','sess-telescope','sess-camera','sess-filters','sess-integration',
+   'sess-frames','sess-gain','sess-bortle','sess-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sess-seeing').value='';
+  document.getElementById('sess-target').value=targetId||'';
+  const sel=document.getElementById('sess-equip-select');
+  sel.innerHTML='<option value="">— Manual Entry —</option>';
+  equipment.forEach(eq=>{
+    const o=document.createElement('option');o.value=eq.id;o.textContent=eq.name;
+    if(eq.is_default)o.selected=true;sel.appendChild(o);
+  });
+  if(equipment.find(e=>e.is_default))fillEquipFields();
+  if(sessionId){
+    const s=sessions.find(ss=>ss.id===sessionId);
+    if(s){
+      document.getElementById('sess-target').value=s.target_id;
+      document.getElementById('sess-date').value=s.session_date;
+      document.getElementById('sess-location').value=s.location||'';
+      document.getElementById('sess-telescope').value=s.telescope||'';
+      document.getElementById('sess-camera').value=s.camera||'';
+      document.getElementById('sess-filters').value=s.filters||'';
+      document.getElementById('sess-integration').value=s.integration_time||'';
+      document.getElementById('sess-frames').value=s.frame_count||'';
+      document.getElementById('sess-gain').value=s.gain||'';
+      document.getElementById('sess-bortle').value=s.bortle||'';
+      document.getElementById('sess-seeing').value=s.seeing||'';
+      document.getElementById('sess-notes').value=s.notes||'';
+    }
+  }
+  document.getElementById('sess-modal-overlay').classList.add('open');
+}
+function fillEquipFields(){
+  const id=document.getElementById('sess-equip-select').value;
+  if(!id)return;
+  const eq=equipment.find(e=>e.id==id);
+  if(!eq)return;
+  document.getElementById('sess-telescope').value=eq.telescope||'';
+  document.getElementById('sess-camera').value=eq.camera||'';
+}
+async function saveSession(){
+  const body={
+    target_id:document.getElementById('sess-target').value.trim(),
+    session_date:document.getElementById('sess-date').value,
+    location:document.getElementById('sess-location').value,
+    telescope:document.getElementById('sess-telescope').value,
+    camera:document.getElementById('sess-camera').value,
+    filters:document.getElementById('sess-filters').value,
+    integration_time:parseInt(document.getElementById('sess-integration').value)||0,
+    frame_count:parseInt(document.getElementById('sess-frames').value)||0,
+    gain:parseInt(document.getElementById('sess-gain').value)||null,
+    bortle:parseInt(document.getElementById('sess-bortle').value)||null,
+    seeing:document.getElementById('sess-seeing').value,
+    notes:document.getElementById('sess-notes').value,
+  };
+  if(!body.target_id){alert('Target ID required');return}
+  if(editingSessionId){
+    await fetch(`api/sessions.php?id=${editingSessionId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }else{
+    await fetch('api/sessions.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  await loadSessions();closeSessModal();
+}
+function closeSessModal(e){
+  if(e&&e.target!==document.getElementById('sess-modal-overlay'))return;
+  document.getElementById('sess-modal-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════════
+function loadSettings(){renderLocationsList();renderEquipmentList()}
+function switchSettingsTab(tab){
+  document.querySelectorAll('.settings-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.settings-panel').forEach(p=>p.classList.toggle('active',p.id==='settings-panel-'+tab));
+}
+
+function renderLocationsList(){
+  const el=document.getElementById('locations-list');
+  if(!locations.length){el.innerHTML='<p style="color:var(--text3);font-size:13px">No locations saved.</p>';return}
+  el.innerHTML=locations.map(l=>`<div class="list-item">
+    <div class="list-item-info">
+      <div class="list-item-name">${l.name} ${l.is_default?'<span class="default-badge">Default</span>':''}</div>
+      <div class="list-item-sub">Lat: ${l.lat}, Lon: ${l.lon}${l.bortle?`, Bortle ${l.bortle}`:''}${l.min_altitude!=null?`, Min: ${l.min_altitude}°`:''}</div>
+    </div>
+    <div class="list-item-actions">
+      <button class="btn btn-secondary btn-sm" onclick="openLocationModal(${l.id})">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteLocation(${l.id})">Delete</button>
+    </div></div>`).join('');
+}
+
+function renderEquipmentList(){
+  const el=document.getElementById('equipment-list');
+  if(!equipment.length){el.innerHTML='<p style="color:var(--text3);font-size:13px">No equipment sets saved.</p>';return}
+  el.innerHTML=equipment.map(eq=>{
+    const fov=calcFOV(eq.sensor_width,eq.sensor_height,eq.focal_length);
+    const arcsecPx=calcArcsecPerPixel(eq.pixel_size,eq.focal_length);
+    const fRatio=(eq.focal_length&&eq.aperture)?`f/${Math.round(eq.focal_length/eq.aperture*10)/10}`:'';
+    return`<div class="list-item">
+      <div class="list-item-info">
+        <div class="list-item-name">${eq.name} ${eq.is_default?'<span class="default-badge">Default</span>':''}</div>
+        <div class="list-item-sub">${eq.telescope||'—'} · ${eq.camera||'—'}${eq.focal_length?` · ${eq.focal_length}mm`:''}${fRatio?` · ${fRatio}`:''}</div>
+        ${fov?`<div class="fov-info">FOV: ${fov.w}' × ${fov.h}' (${Math.round(fov.w/60*100)/100}° × ${Math.round(fov.h/60*100)/100}°)${arcsecPx?` · Resolution: ${arcsecPx}"/px`:''}</div>`:''}
+      </div>
+      <div class="list-item-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openEquipModal(${eq.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEquipment(${eq.id})">Delete</button>
+      </div></div>`;
+  }).join('');
+}
+
+function openLocationModal(id=null){
+  editingLocId=id;
+  document.getElementById('loc-modal-title').textContent=id?'Edit Location':'Add Location';
+  if(id){
+    const l=locations.find(l=>l.id===id);
+    document.getElementById('loc-name').value=l.name||'';
+    document.getElementById('loc-lat').value=l.lat||'';
+    document.getElementById('loc-lon').value=l.lon||'';
+    document.getElementById('loc-bortle').value=l.bortle||'';
+    document.getElementById('loc-minalt').value=l.min_altitude||20;
+    document.getElementById('loc-notes').value=l.notes||'';
+    document.getElementById('loc-default').checked=!!l.is_default;
+  }else{
+    ['loc-name','loc-lat','loc-lon','loc-bortle','loc-notes'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('loc-minalt').value=20;
+    document.getElementById('loc-default').checked=false;
+  }
+  document.getElementById('loc-modal-overlay').classList.add('open');
+}
+async function saveLocation(){
+  const body={name:document.getElementById('loc-name').value.trim(),
+    lat:parseFloat(document.getElementById('loc-lat').value),
+    lon:parseFloat(document.getElementById('loc-lon').value),
+    bortle:parseInt(document.getElementById('loc-bortle').value)||null,
+    min_altitude:parseFloat(document.getElementById('loc-minalt').value)||20,
+    notes:document.getElementById('loc-notes').value.trim(),
+    is_default:document.getElementById('loc-default').checked};
+  if(!body.name||isNaN(body.lat)||isNaN(body.lon)){alert('Name, latitude and longitude required');return}
+  if(editingLocId){
+    await fetch(`api/locations.php?id=${editingLocId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }else{
+    await fetch('api/locations.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  await loadLocations();loadPlannerDropdowns();renderLocationsList();closeLocModal();
+}
+async function deleteLocation(id){
+  if(!confirm('Delete this location?'))return;
+  await fetch(`api/locations.php?id=${id}`,{method:'DELETE'});
+  await loadLocations();loadPlannerDropdowns();renderLocationsList();
+}
+function closeLocModal(e){
+  if(e&&e.target!==document.getElementById('loc-modal-overlay'))return;
+  document.getElementById('loc-modal-overlay').classList.remove('open');
+}
+
+function setupEquipFOVLive(){
+  ['equip-fl','equip-sw','equip-sh','equip-pixel'].forEach(id=>{
+    document.getElementById(id).addEventListener('input',updateEquipFOVPreview);
+  });
+}
+function updateEquipFOVPreview(){
+  const fl=parseFloat(document.getElementById('equip-fl').value);
+  const sw=parseFloat(document.getElementById('equip-sw').value);
+  const sh=parseFloat(document.getElementById('equip-sh').value);
+  const px=parseFloat(document.getElementById('equip-pixel').value);
+  const el=document.getElementById('equip-fov-preview');
+  const parts=[];
+  if(fl&&sw&&sh){
+    const fov=calcFOV(sw,sh,fl);
+    parts.push(`FOV: ${fov.w}' × ${fov.h}' (${Math.round(fov.w/60*100)/100}° × ${Math.round(fov.h/60*100)/100}°)`);
+  }
+  if(fl&&px){
+    const ar=calcArcsecPerPixel(px,fl);
+    parts.push(`Resolution: ${ar}"/px`);
+  }
+  el.textContent=parts.join(' · ');
+}
+function openEquipModal(id=null){
+  editingEquipId=id;
+  document.getElementById('equip-modal-title').textContent=id?'Edit Equipment Set':'Add Equipment Set';
+  if(id){
+    const eq=equipment.find(e=>e.id===id);
+    document.getElementById('equip-name').value=eq.name||'';
+    document.getElementById('equip-scope').value=eq.telescope||'';
+    document.getElementById('equip-fl').value=eq.focal_length||'';
+    document.getElementById('equip-ap').value=eq.aperture||'';
+    document.getElementById('equip-mount').value=eq.mount||'';
+    document.getElementById('equip-camera').value=eq.camera||'';
+    document.getElementById('equip-pixel').value=eq.pixel_size||'';
+    document.getElementById('equip-sw').value=eq.sensor_width||'';
+    document.getElementById('equip-sh').value=eq.sensor_height||'';
+    document.getElementById('equip-notes').value=eq.notes||'';
+    document.getElementById('equip-default').checked=!!eq.is_default;
+  }else{
+    ['equip-name','equip-scope','equip-fl','equip-ap','equip-mount','equip-camera',
+     'equip-pixel','equip-sw','equip-sh','equip-notes'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('equip-default').checked=false;
+  }
+  updateEquipFOVPreview();
+  document.getElementById('equip-modal-overlay').classList.add('open');
+}
+async function saveEquipment(){
+  const body={name:document.getElementById('equip-name').value.trim(),
+    telescope:document.getElementById('equip-scope').value.trim(),
+    focal_length:parseInt(document.getElementById('equip-fl').value)||null,
+    aperture:parseInt(document.getElementById('equip-ap').value)||null,
+    mount:document.getElementById('equip-mount').value.trim(),
+    camera:document.getElementById('equip-camera').value.trim(),
+    pixel_size:parseFloat(document.getElementById('equip-pixel').value)||null,
+    sensor_width:parseFloat(document.getElementById('equip-sw').value)||null,
+    sensor_height:parseFloat(document.getElementById('equip-sh').value)||null,
+    notes:document.getElementById('equip-notes').value.trim(),
+    is_default:document.getElementById('equip-default').checked};
+  if(!body.name){alert('Name required');return}
+  if(editingEquipId){
+    await fetch(`api/equipment.php?id=${editingEquipId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }else{
+    await fetch('api/equipment.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  await loadEquipment();renderEquipmentList();loadPlannerDropdowns();closeEquipModal();
+}
+async function deleteEquipment(id){
+  if(!confirm('Delete this equipment set?'))return;
+  await fetch(`api/equipment.php?id=${id}`,{method:'DELETE'});
+  await loadEquipment();renderEquipmentList();loadPlannerDropdowns();
+}
+function closeEquipModal(e){
+  if(e&&e.target!==document.getElementById('equip-modal-overlay'))return;
+  document.getElementById('equip-modal-overlay').classList.remove('open');
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+});
+
+init();
+</script>
+</body>
+</html>
