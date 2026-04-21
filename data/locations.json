@@ -1,1 +1,53 @@
-[]
+[
+  {
+    "id": 1,
+    "name": "Starfront Observatory",
+    "lat": 31.5475,
+    "lon": -99.3817,
+    "bortle": 1,
+    "notes": "Remote telescope hosting facility near Brady, Texas. Bortle 1 dark skies. See https://starfront.space/",
+    "min_altitude": 20,
+    "is_default": true
+  },
+  {
+    "id": 2,
+    "name": "New York, NY (Eastern)",
+    "lat": 40.7128,
+    "lon": -74.0060,
+    "bortle": 9,
+    "notes": "Sample Eastern Time location. Replace with your actual observing site.",
+    "min_altitude": 20,
+    "is_default": false
+  },
+  {
+    "id": 3,
+    "name": "Chicago, IL (Central)",
+    "lat": 41.8781,
+    "lon": -87.6298,
+    "bortle": 9,
+    "notes": "Sample Central Time location. Replace with your actual observing site.",
+    "min_altitude": 20,
+    "is_default": false
+  },
+  {
+    "id": 4,
+    "name": "Denver, CO (Mountain)",
+    "lat": 39.7392,
+    "lon": -104.9903,
+    "bortle": 8,
+    "notes": "Sample Mountain Time location. Replace with your actual observing site.",
+    "min_altitude": 20,
+    "is_default": false
+  },
+  {
+    "id": 5,
+    "name": "Los Angeles, CA (Pacific)",
+    "lat": 34.0522,
+    "lon": -118.2437,
+    "bortle": 9,
+    "notes": "Sample Pacific Time location. Replace with your actual observing site.",
+    "min_altitude": 20,
+    "is_default": false
+  }
+]
+
